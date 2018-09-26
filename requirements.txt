@@ -1,0 +1,7 @@
+django==2.1.1
+django-extensions==2.1.2
+mysqlclient==1.3.13
+django-author==1.0.2
+celery==4.2.1
+ussd_airflow==0.0.5
+africastalking==1.1.4
