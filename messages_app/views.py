@@ -1,4 +1,5 @@
-from django.shortcuts import render
+import datetime
+import json
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -15,22 +16,25 @@ class AfricastalkingMessageCallback(View):
         return super(AfricastalkingMessageCallback, self).dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        request_data = request.post
+        request_data = json.loads(request.post)
         from_telephone = request_data.get("from", "")
         to_telephone = request_data.get("to", "")
         text = request_data.get("text", "")
-        date = request_data.get("date", "")
+        date = request_data.get("date", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         africastalking_id = request_data.get("id", "")
         link_id = request_data.get("linkId", "")
 
         # save message
-        Message.objects.create(
-            from_telephone=from_telephone,
-            to_telephone=to_telephone,
-            text=text,
-            africastalking_id=africastalking_id,
-            link_id=link_id
-        )
+        if not Message.objects.filter(africastalking_id=africastalking_id).exists():
+            message = Message.objects.create(
+                from_telephone=from_telephone,
+                to_telephone=to_telephone,
+                text=text,
+                africastalking_id=africastalking_id,
+                link_id=link_id
+            )
+        else:
+            message = Message.objects.filter(africastalking_id=africastalking_id).first()
 
         # get which action message is and process it
         # actions

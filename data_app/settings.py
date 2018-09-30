@@ -43,11 +43,12 @@ INSTALLED_APPS = [
     'django_extensions',
     'author',
     'celery',
+    'ussd.apps.UssdConfig',
 
     'accounts.apps.AccountsConfig',
     'messages_app.apps.MessagesAppConfig',
     'weather_data.apps.WeatherDataConfig',
-    'ussd.apps.UssdConfig',
+    'ussd_app.apps.UssdAppConfig',
 
 
 ]
@@ -140,3 +141,4 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 OPEN_WEATHER_API_KEY = ""
+DEFAULT_USSD_SCREEN_JOURNEY = os.path.join(BASE_DIR, "ussd_app", 'yaml', "initial.yaml")
