@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'author.middlewares.AuthorDefaultBackendMiddleware',
 ]
 
 ROOT_URLCONF = 'data_app.urls'
@@ -142,3 +143,6 @@ STATIC_URL = '/static/'
 
 OPEN_WEATHER_API_KEY = ""
 DEFAULT_USSD_SCREEN_JOURNEY = os.path.join(BASE_DIR, "ussd_app", 'yaml', "initial.yaml")
+
+AFRICASTALKING_USERNAME = ""
+AFRICASTALKING_API_KEY = ""
