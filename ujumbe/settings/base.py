@@ -33,7 +33,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -43,6 +42,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'celery',
+    'django_extensions',
+    'djchoices',
+
+    'ujumbe.apps.africastalking.apps.AfricastalkingConfig',
+    'ujumbe.apps.profiles.apps.ProfilesConfig',
+    'ujumbe.apps.weather.apps.WeatherConfig'
 ]
 
 MIDDLEWARE = [
