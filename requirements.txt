@@ -5,3 +5,7 @@ django-author==1.0.2
 celery==4.2.1
 ussd_airflow==0.0.5
 africastalking==1.1.4
+django-choices==1.6.1
+bs4==0.0.1
+mock==2.0.0
+django-dynamic-fixture==2.0.0
