@@ -19,7 +19,13 @@ class Profile(TimeStampedModel):
 
     @property
     def full_name(self):
-        return self.user.get_full_name()
+        if self.user is not None:
+            if str(self.user.get_full_name()).replace(" ", "") != "":
+                return self.user.get_full_name()
+            else:
+                return self.user.username
+        else:
+            return ""
 
     def __str__(self):
         return "Name : {} Phone : {}.".format(self.full_name, self.telephone)

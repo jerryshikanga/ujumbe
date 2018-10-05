@@ -12,18 +12,18 @@ class Message(TimeStampedModel):
         Nexmo = ChoiceItem("Nexmo")
 
     phonenumber = models.CharField(max_length=20, null=False, blank=False)
-    text = models.CharField(max_length=255, null=False, blank=False)
+    text = models.TextField(null=False, blank=False)
     handler = models.CharField(null=False, blank=False, choices=MessageProviders.choices, max_length=100, default=MessageProviders.Africastalking)
 
     class Meta:
         abstract = True
 
     def __str__(self):
-        return "SMS, Phone {} Through {} on {}. Text {}".format(self.phonenumber, self.handler, self.created.strftime("%Y-%m-%d %H:%M:%s"), self.text)
+        return "SMS, Phone {} Through {} on {}. Text {}".format(self.phonenumber, self.handler, self.created.strftime("%Y-%m-%d %H:%M"), self.text)
 
     @property
     def summary(self):
-        return "SMS : Phone {} on {}.".format(self.phonenumber, self.created.strftime("%Y-%m-%d %H:%M:%s"))
+        return "SMS : Phone {} on {}.".format(self.phonenumber, self.created.strftime("%Y-%m-%d %H:%M"))
 
 
 class IncomingMessage(Message):
