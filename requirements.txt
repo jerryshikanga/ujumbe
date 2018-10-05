@@ -9,4 +9,4 @@ django-choices==1.6.1
 bs4==0.0.1
 mock==2.0.0
 django-dynamic-fixture==2.0.0
-django-rest-framework
+django-rest-framework==0.1.0

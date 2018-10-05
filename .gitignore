@@ -1,6 +1,7 @@
 *.pyc
 *.xml
 .idea/*
+*.log
 
 *.ini
 data_app/settings/config.ini
