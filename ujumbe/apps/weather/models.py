@@ -1,67 +1,53 @@
-from django.db import models
 from author.decorators import with_author
-from django_extensions.db.models import TimeStampedModel
-from djchoices import ChoiceItem, DjangoChoices
+from django.db import models
 from django.utils import timezone
+from django_extensions.db.models import TimeStampedModel
+
 
 # Create your models here.
 @with_author
-class Location(TimeStampedModel):
-    class KenyanCounties(DjangoChoices):
-        Mombasa = ChoiceItem("Mombasa")
-        Isiolo = ChoiceItem("Isiolo")
-        Muranga = ChoiceItem("Murang'a")
-        Laikipi = ChoiceItem("Laikipia")
-        Siaya = ChoiceItem("Siaya")
-        Kwale = ChoiceItem("Kwale")
-        Meru = ChoiceItem("Meru")
-        Kiambu = ChoiceItem("Kiambu")
-        Nakuru = ChoiceItem("Nakuru")
-        Kisumu = ChoiceItem("Kisumu")
-        Kilifi = ChoiceItem("Kilifi")
-        TharakaNithi = ChoiceItem("Tharaka-Nithi")
-        Turkana = ChoiceItem("Turkana")
-        Narok = ChoiceItem("Narok")
-        HomaBay = ChoiceItem("homa-Bay")
-        TanaRiver = ChoiceItem("Tana-River")
-        Embu = ChoiceItem("Embu")
-        WestPokot = ChoiceItem("West-Pokot")
-        Kajiado = ChoiceItem("Kajiado")
-        Migori = ChoiceItem("Migori")
-        Lamu = ChoiceItem("Lamu")
-        Kitui = ChoiceItem("Kitui")
-        Samburu = ChoiceItem("Samburu")
-        Kericho = ChoiceItem("Kericho")
-        Kisii = ChoiceItem("Kisii")
-        TaitaTaveta = ChoiceItem("Taita-Taveta")
-        Machakos = ChoiceItem("Machakos")
-        TransNzoia = ChoiceItem("Trans-Nzoia")
-        Bomet = ChoiceItem("Bomet")
-        Nyamira = ChoiceItem("Nyamira")
-        Garissa = ChoiceItem("Garissa")
-        Makueni = ChoiceItem("Makueni")
-        UasinGishu = ChoiceItem("UasinGishu")
-        Kakamega = ChoiceItem("Kakamega")
-        Nairobi = ChoiceItem("Nairobi")
-        Wajir = ChoiceItem("Wajir")
-        Nyandarua = ChoiceItem("Nyandarua")
-        ElgeyoMarakwet = ChoiceItem("Elgeyo-Marakwet")
-        Vihiga = ChoiceItem("Vihiga")
-        Mandera = ChoiceItem("Mandera")
-        Nyeri = ChoiceItem("Nyeri")
-        Nandi = ChoiceItem("Nandi")
-        Bungoma = ChoiceItem("Bungoma")
-        Marsabit = ChoiceItem("Marsabit")
-        Kirinyaga = ChoiceItem("Kirinyaga")
-        Baringo = ChoiceItem("Baringo")
-        Busia = ChoiceItem("Busia")
+class Country(TimeStampedModel):
+    name = models.CharField(max_length=50, null=False, blank= False, unique=True)
+    alpha2 = models.CharField(max_length=2, null=False, blank=False, unique=True)
+    alpha3 = models.CharField(max_length=3, null=False, blank=False, unique=True)
 
-    latitude = models.FloatField(default=0, blank=False, null=False)
-    longitude = models.FloatField(default=0, blank=False, null=False)
-    name = models.CharField(max_length=255, blank=False, null=False, choices=KenyanCounties.choices)
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Countries"
+        verbose_name = "Country"
+        ordering = ["name", ]
+
+
+class LocationManager(models.Manager):
+    def with_active_subscription(self):
+        return super(LocationManager, self).get_queryset()
+
+
+@with_author
+class Location(TimeStampedModel):
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+    name = models.CharField(max_length=255, blank=False, null=False)
+    country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True)
+
+    objects = LocationManager()
+
+    class Meta(object):
+        unique_together = ["latitude", "longitude"]
+        verbose_name = "Location"
+        verbose_name_plural = "Locations"
+        ordering = ["name",]
 
     def __str__(self):
         return "{} Latitude : {}, Longitude : {}".format(self.name, self.latitude, self.longitude)
+
+    def get_name_with_country_code(self):
+        if self.country is None:
+            raise ValueError("Country cannot be blank")
+        else:
+            return "{}, {}".format(self.name, self.country.alpha2)
 
 
 class LocationWeather(TimeStampedModel):
@@ -170,3 +156,6 @@ class ForecastWeather(LocationWeather):
     @property
     def detailed(self):
         return "Forecast for {}, {}".format(self.period, super(ForecastWeather, self).detailed)
+
+
+

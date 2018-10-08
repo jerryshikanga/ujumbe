@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'celery',
     'django_extensions',
     'djchoices',
+    'django_celery_beat',
 
     'ujumbe.apps.africastalking.apps.AfricastalkingConfig',
     'ujumbe.apps.profiles.apps.ProfilesConfig',

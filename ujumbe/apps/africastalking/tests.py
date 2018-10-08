@@ -60,3 +60,4 @@ class AfricastalkingViewTests(TestCase):
         self.assertTrue(Profile.objects.filter(telephone=self.phonenumber).exists(), "Profile obj not created")
 
 
+
