@@ -43,3 +43,11 @@ class OutgoingMessages(Message):
     cost = models.CharField(null=False, blank=False, default="", max_length=10)
     delivery_status = models.CharField(null=False, blank=False, max_length=20, choices=MessageDeliveryStatus.choices,
                                        default="UNKNOWN")
+
+
+@with_author
+class UssdSession(TimeStampedModel):
+    session_id = models.CharField(max_length=100, null=True, blank=True)
+    phonenumber = models.CharField(max_length=34, null=True, blank=True)
+    service_code = models.CharField(max_length=10, null=True, blank=True)
+    text = models.TextField(null=True, blank=True)

@@ -47,3 +47,12 @@ LOGGING = {
         },
     },
 }
+
+
+if "SUPPORT" not in config:
+    message = "Support config options missing in config file"
+    logging.error(message)
+    raise ValueError(message)
+
+CUSTOMER_SUPPORT_PHONE = config["SUPPORT"]["phone"]
+CUSTOMER_SUPPORT_EMAIL = config["SUPPORT"]["email"]

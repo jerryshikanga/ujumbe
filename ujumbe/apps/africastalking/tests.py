@@ -14,11 +14,11 @@ User = get_user_model()
 # Create your tests here.
 class AfricastalkingViewTests(TestCase):
     def setUp(self):
-        self.phonenumber = "+254727447101"
+        self.phonenumber = "+254792651659"
         self.at_shortcode = 20880
 
     def test_register_view(self):
-            text = "REGISTER JERRY SHIKANGA"
+            text = "REGISTER Martin Miano"
             at_id = get_random_string(10)
             linkId = get_random_string(15)
             time = (datetime.datetime.now() - datetime.timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")

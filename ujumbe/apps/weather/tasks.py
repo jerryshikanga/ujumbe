@@ -3,14 +3,14 @@ import requests
 from celery import task
 from django.conf import settings
 from django.utils import timezone
-
+from ujumbe.apps.profiles.tasks import send_sms
 from ujumbe.apps.weather.models import Location, CurrentWeather
 
 open_weather_app_id = settings.OPEN_WEATHER_APP_ID
 
 
 @task
-def get_current_weather_by_location_id(latitude: int, longitude: int):
+def get_current_weather(latitude: int, longitude: int):
     url = "api.openweathermap.org/data/2.5/weather"
     data = {
         "lat": latitude,
@@ -72,10 +72,11 @@ def update_location_current_weather(location: Location):
         weather.wind_speed = response_json["wind"]["speed"]
         weather.clouds_all = response_json["clouds"]["all"]
         weather.save()
-
+        return weather
     else:
         logging.warning("Request at {} failed with status {} and message {}".format(str(timenow), response.status_code,
                                                                                     response.text))
+        return None
 
 
 @task
@@ -88,8 +89,24 @@ def run_weather_checks_by_name():
             print(message)
             logging.info(message)
         except Exception as e:
-            message = "Failed to run {} for {}. Error {}".format(str(run_weather_checks_by_name.__name__), str(location), str(e))
+            message = "Failed to run {} for {}. Error {}".format(str(run_weather_checks_by_name.__name__),
+                                                                 str(location), str(e))
             print(message)
             logging.warning(message)
 
+
+@task
+def send_user_current_location_weather(phonenumber: str, location_id: int = None):
+    if location_id is None:
+        from ujumbe.apps.profiles.models import Profile
+        profile = Profile.objects.filter(telephone=phonenumber).first()
+        location = profile.location
+    else:
+        location = Location.objects.get(id=location_id)
+    if CurrentWeather.objects.filter(location=location).exists():
+        weather = CurrentWeather.objects.filter(location=location).first()
+    else:
+        CurrentWeather.objects.create(location=location)
+        weather = update_location_current_weather(location=location)
+    send_sms.delay(phonenumber=phonenumber, text=weather.detailed)
 

@@ -1,15 +1,18 @@
 import datetime
 import json
 import logging
-from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location
-from ujumbe.apps.profiles.models import Profile, Subscription
+import re
+from django.http.response import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from djchoices import DjangoChoices, ChoiceItem
-from django.http.response import HttpResponse
-from ujumbe.apps.africastalking.models import IncomingMessage, OutgoingMessages
-from ujumbe.apps.weather.models import Location, CurrentWeather
+from ujumbe.apps.weather.tasks import send_user_current_location_weather
+from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession
+from ujumbe.apps.profiles.models import Profile, Subscription
+from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location
+from ujumbe.apps.weather.models import CurrentWeather, Location
+from ujumbe.apps.weather.utils import get_weather_forecast_periods
 
 
 # Create your views here.
@@ -116,14 +119,15 @@ class ATMessageCallbackView(View):
                 else:
                     keywords = ""
                     for key in MessageKeywords.choices:
-                        keywords += key[1]+" "
-                    response += "Your entry {} is invalid. Try again with either {}. ".format(incoming_message.text, keywords)
+                        keywords += key[1] + " "
+                    response += "Your entry {} is invalid. Try again with either {}. ".format(incoming_message.text,
+                                                                                              keywords)
 
                 # additional checks for unset fields
                 if profile.location is None:
                     response += "Remember to set your location. "
                 if profile.user is not None:
-                    if profile.user.email is None or str(profile.user.email).replace(" ", "")=="":
+                    if profile.user.email is None or str(profile.user.email).replace(" ", "") == "":
                         response += "Remember to set your email. "
 
             else:
@@ -143,3 +147,93 @@ class ATMessageCallbackView(View):
         except Exception as e:
             logging.error(e)
             return HttpResponse(status=400)
+
+
+class AtUssdcallbackView(View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        super(AtUssdcallbackView, self).dispatch(*args, **kwargs)
+
+
+
+    def post(self, request, *args, **kwargs):
+        # Reads the variables sent via POST
+        data = json.loads(request.body)
+        session_id = data.get("sessionId", None)
+        service_code = data.get("serviceCode", None)
+        phonenumber = data.get("phoneNumber", None)
+        text = data.get("text", "")
+        text = str(text).strip()
+
+        if session_id is None or phonenumber is None:
+            return HttpResponse(status=400)
+
+        UssdSession.objects.get_or_create(
+            session_id=session_id,
+            service_code=service_code,
+            phonenumber=phonenumber,
+            text=text
+        )
+
+        if Profile.objects.filter(telephone=phonenumber).exists():
+            data = "CON You don't have an account. Choose an option : \n"
+            data += "0. Register \n"
+            data += "99. Exit\n"
+        else:
+            profile = Profile.objects.filter(telephone=phonenumber).first()
+            # no text entered by user
+            if text == "":
+                data = "CON Choose Operation\n"
+                data += "1. Current Weather Data\n"
+                data += "2. Forecast Weather Data\n"
+                data += "3. My Account\n"
+
+            elif text == "1":
+                data = "CON : Choose location\n"
+                data += "1. Enter location\n"
+                if profile.location is not None:
+                    data += "2. Default location ({})\n".format(profile.location.name)
+
+            elif text == "1*2":
+                data = "END Your current location weather will be sent to you shortly via SMS."
+                send_user_current_location_weather.delay(phonenumber=phonenumber)
+
+            elif text == "1*1":
+                data = "CON Enter location name."
+
+            elif re.match("1*1*", text) is not None and len(text.split("*")) == 3:
+                parts = text.split("*")
+                location = Location.try_resolve_location_by_name(name=parts[2])
+                if location is None:
+                    data = "END Location could not be determined"
+                else:
+                    data = "END Your current location weather will be sent to you shortly via SMS."
+                    send_user_current_location_weather.delay(phonenumber=phonenumber, location_id=location.id)
+
+            elif text == "2":
+                data = "CON : Choose location\n"
+                data += "1. Enter location\n"
+                if profile.location is not None:
+                    data += "2. Default location ({})\n".format(profile.location.name)
+
+            elif text == "2*1":
+                data = "CON Enter location name."
+
+            elif re.match("2*1*", text) is not None and len(text.split("*")) == 3:
+                parts = text.split("*")
+                location = Location.try_resolve_location_by_name(name=parts[2])
+                if location is None:
+                    data = "END Location could not be determined"
+                else:
+                    data = "CON Choose period."
+                    data += get_weather_forecast_periods()
+
+            elif text == "2*2":
+                data = "CON Choose period."
+                data += get_weather_forecast_periods()
+
+            # TODO : Implement step when forecast data has been picked
+            # TODO : Implement Accounts
+            # TODO : Implement Subscriptions
+
+        return HttpResponse(status=200, content_type="text/plain", content=data)

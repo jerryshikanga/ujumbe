@@ -49,6 +49,16 @@ class Location(TimeStampedModel):
         else:
             return "{}, {}".format(self.name, self.country.alpha2)
 
+    @classmethod
+    def try_resolve_location_by_name(cls, name : str, phonenumber :str = None):
+        """
+        https://maps.googleapis.com/maps/api/place/findplacefromtext/output?parameters
+        """
+        from phone_iso3166.country import phone_country
+        country = Country.objects.filter(alpha2=phone_country(phonenumber)).first()
+        location = Location.objects.filter(country=country, name__icontains=name).first()
+        return location
+
 
 class LocationWeather(TimeStampedModel):
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)

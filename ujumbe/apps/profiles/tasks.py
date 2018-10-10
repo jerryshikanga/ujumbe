@@ -60,16 +60,16 @@ def update_profile_location(phonenumber: str, location_name):
         return False
 
 @task
-def send_sms(phonenumber: int, text: str):
+def send_sms(phonenumber: str, text: str):
     africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
     sms = africastalking.SMS
     # disabled to save on costs
-    # response = sms.send(text, [phonenumber, ])
-    # status_code = int(response["SMSMessageData"]["Recipients"][0]["statusCode"])
-    # cost = str(response["SMSMessageData"]["Recipients"][0]["cost"])
+    response = sms.send(text, [phonenumber, ])
+    status_code = int(response["SMSMessageData"]["Recipients"][0]["statusCode"])
+    cost = str(response["SMSMessageData"]["Recipients"][0]["cost"])
 
-    cost = 0
-    status_code = 101
+    # cost = 0
+    # status_code = 101
 
     from ujumbe.apps.africastalking.models import Message
     outgoing_sms = OutgoingMessages.objects.create(
@@ -95,5 +95,5 @@ def send_sms(phonenumber: int, text: str):
         outgoing_sms.save()
         return True
     else:
-        logging.warning("Failed to send message {}".format(str(outgoing_sms)))
+        logging.warning("Failed to send message Status code {} {} ".format(str(status_code), str(outgoing_sms)))
         return False
