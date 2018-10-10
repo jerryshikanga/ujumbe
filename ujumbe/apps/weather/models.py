@@ -7,7 +7,7 @@ from django_extensions.db.models import TimeStampedModel
 # Create your models here.
 @with_author
 class Country(TimeStampedModel):
-    name = models.CharField(max_length=50, null=False, blank= False, unique=True)
+    name = models.CharField(max_length=50, null=False, blank=False, unique=True)
     alpha2 = models.CharField(max_length=2, null=False, blank=False, unique=True)
     alpha3 = models.CharField(max_length=3, null=False, blank=False, unique=True)
 
@@ -22,7 +22,10 @@ class Country(TimeStampedModel):
 
 class LocationManager(models.Manager):
     def with_active_subscription(self):
-        return super(LocationManager, self).get_queryset()
+        return super(LocationManager, self).get_queryset().filter(subscription__active=True)
+
+    def in_country(self, country: Country):
+        return super(LocationManager, self).get_queryset().filter(country=country)
 
 
 @with_author
@@ -38,7 +41,7 @@ class Location(TimeStampedModel):
         unique_together = ["latitude", "longitude"]
         verbose_name = "Location"
         verbose_name_plural = "Locations"
-        ordering = ["name",]
+        ordering = ["name", ]
 
     def __str__(self):
         return "{} Latitude : {}, Longitude : {}".format(self.name, self.latitude, self.longitude)
@@ -50,14 +53,10 @@ class Location(TimeStampedModel):
             return "{}, {}".format(self.name, self.country.alpha2)
 
     @classmethod
-    def try_resolve_location_by_name(cls, name : str, phonenumber :str = None):
-        """
-        https://maps.googleapis.com/maps/api/place/findplacefromtext/output?parameters
-        """
+    def try_resolve_location_by_name(cls, name: str, phonenumber: str = None):
         from phone_iso3166.country import phone_country
         country = Country.objects.filter(alpha2=phone_country(phonenumber)).first()
-        location = Location.objects.filter(country=country, name__icontains=name).first()
-        return location
+        return Location.objects.in_country(country).filter(name__icontains=name).first()
 
 
 class LocationWeather(TimeStampedModel):
@@ -166,6 +165,3 @@ class ForecastWeather(LocationWeather):
     @property
     def detailed(self):
         return "Forecast for {}, {}".format(self.period, super(ForecastWeather, self).detailed)
-
-
-

@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django_extensions.db.models import TimeStampedModel
 from author.decorators import with_author
 from ujumbe.apps.weather.models import Location
+from djchoices import DjangoChoices, ChoiceItem
 
 # Create your models here.
 User = get_user_model()
@@ -60,12 +61,11 @@ class SubscriptionManager(models.Manager):
 
 @with_author
 class Subscription(TimeStampedModel):
-    SubscriptionTypes = [
-        ("CURRENT", "CURRENT"),
-        ("FORECAST", "FORECAST"),
-    ]
+    class SubscriptionTypes(DjangoChoices):
+        forecast = ChoiceItem("FORECAST")
+        current = ChoiceItem("CURRENT")
 
-    subscription_type = models.CharField(choices=SubscriptionTypes, default="FORECAST", null=False, blank=False,
+    subscription_type = models.CharField(choices=SubscriptionTypes.choices, default=SubscriptionTypes.forecast, null=False, blank=False,
                                          max_length=50)
     profile = models.ForeignKey(Profile, null=False, blank=False, on_delete=models.CASCADE)
     frequency = models.TimeField(null=False, blank=False)

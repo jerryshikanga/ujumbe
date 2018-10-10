@@ -4,7 +4,10 @@
 *.log
 
 *.ini
-data_app/settings/config.ini
+ujumbe/settings/config.ini
+
+celerybeat-schedule
+celerybeat.pid
 
 
 ### JetBrains ###

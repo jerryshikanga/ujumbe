@@ -12,7 +12,7 @@ from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession
 from ujumbe.apps.profiles.models import Profile, Subscription
 from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location
 from ujumbe.apps.weather.models import CurrentWeather, Location
-from ujumbe.apps.weather.utils import get_weather_forecast_periods
+from ujumbe.apps.weather.utils import get_weather_forecast_periods, get_location_not_found_response
 
 
 # Create your views here.
@@ -205,7 +205,7 @@ class AtUssdcallbackView(View):
                 parts = text.split("*")
                 location = Location.try_resolve_location_by_name(name=parts[2])
                 if location is None:
-                    data = "END Location could not be determined"
+                    data = "END {}".format(get_location_not_found_response(parts[2]))
                 else:
                     data = "END Your current location weather will be sent to you shortly via SMS."
                     send_user_current_location_weather.delay(phonenumber=phonenumber, location_id=location.id)
@@ -223,7 +223,7 @@ class AtUssdcallbackView(View):
                 parts = text.split("*")
                 location = Location.try_resolve_location_by_name(name=parts[2])
                 if location is None:
-                    data = "END Location could not be determined"
+                    data = "END {}".format(get_location_not_found_response(parts[2]))
                 else:
                     data = "CON Choose period."
                     data += get_weather_forecast_periods()
