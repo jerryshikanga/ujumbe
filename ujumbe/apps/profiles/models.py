@@ -73,7 +73,7 @@ class Subscription(TimeStampedModel):
                                          null=False, blank=False,
                                          max_length=50)
     profile = models.ForeignKey(Profile, null=False, blank=False, on_delete=models.CASCADE)
-    frequency = models.TimeField(null=False, blank=False)
+    frequency = models.DurationField(null=False, blank=False)
     last_send = models.DateTimeField(null=False, blank=False, default=timezone.now)
     active = models.BooleanField(default=True, null=False, blank=False)
     location = models.ForeignKey(Location, null=True, blank=True, on_delete=models.SET_NULL)
@@ -81,9 +81,7 @@ class Subscription(TimeStampedModel):
     objects = SubscriptionManager()
 
     def __str__(self):
-        text = "Active " if self.active else "Inactive"
-        return "{} subscription for {} of frequency {}".format(text, self.subscription_type,
-                                                               self.frequency)
+        return "Subscription for {} of frequency {}".format(self.subscription_type, self.frequency)
 
     @property
     def sms_description(self):

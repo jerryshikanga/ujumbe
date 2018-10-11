@@ -12,10 +12,10 @@ from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_u
 from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession
 from ujumbe.apps.profiles.models import Profile, Subscription
 from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location, \
-    create_user_subscription, end_user_subscription, send_user_balance_notification, send_user_account_charges, \
+    create_user_forecast_subscription, end_user_subscription, send_user_balance_notification, send_user_account_charges, \
     set_user_location
 from ujumbe.apps.weather.models import CurrentWeather, Location, ForecastWeather
-from ujumbe.apps.weather.utils import get_weather_forecast_periods, get_location_not_found_response
+from ujumbe.apps.weather.utils import get_ussd_formatted_weather_forecast_periods, get_location_not_found_response
 
 
 # Create your views here.
@@ -227,11 +227,11 @@ class AtUssdcallbackView(View):
                     data = "END {}".format(get_location_not_found_response(parts[2]))
                 else:
                     data = "CON Choose period."
-                    data += get_weather_forecast_periods()
+                    data += get_ussd_formatted_weather_forecast_periods()
 
             elif text == "2*2":
                 data = "CON Choose period."
-                data += get_weather_forecast_periods()
+                data += get_ussd_formatted_weather_forecast_periods()
 
             elif re.match(r"2\*1\*\w+\*\d", text) is not None or re.match(r"2\*2\*\d", text) is not None:
                 parts = text.split("*")
@@ -264,20 +264,18 @@ class AtUssdcallbackView(View):
                 send_user_subscriptions.delay(phonenumber=phonenumber)
             elif text == "3*2":
                 data = "CON Choose Frequency"
-                data += get_weather_forecast_periods()
+                data += get_ussd_formatted_weather_forecast_periods()
             elif re.match("3\*2\*\d", text):
-                data = "CON Choose Period"
-                data += get_weather_forecast_periods()
-            elif re.match("3\*2\*\d*\d", text):
-                data = "CON Choose Location"
-            elif re.match("3\*2\*\d\*\d\*\w+", text):
+                data = "CON Enter Location"
+            elif re.match("3\*2\*\d\*\w+", text):
                 parts = text.split("*")
-                location = Location.try_resolve_location_by_name(name=parts[4])
+                location = Location.try_resolve_location_by_name(name=parts[3])
                 if location is not None:
-                    data = "END Your request has been recieved and will be processed."
-                    create_user_subscription.delay(phonenumber=phonenumber, location_id=location.id)
+                    data = "END Your request has been received and will be processed."
+                    create_user_forecast_subscription.delay(phonenumber=phonenumber, location_id=location.id,
+                                                            frequency=parts[2])
                 else:
-                    data = "END {}".format(get_location_not_found_response(parts[4]))
+                    data = "END {}".format(get_location_not_found_response(parts[3]))
             elif text == "3*3":
                 data = "CON Choose Option to Unsubscribe"
                 subscriptions = Subscription.objects.for_phonenumber(phonenumber)
@@ -310,7 +308,7 @@ class AtUssdcallbackView(View):
                     data = "END {}".format(get_location_not_found_response(parts[2]))
                 else:
                     data = "END Request received successfully."
-                    set_user_location.delay(phonenumber=phonenumber, location_name=parts[2])
+                    set_user_location.delay(phonenumber=phonenumber, location_id=location.id)
             elif text == "99":
                 data = "END Thank you and goodbye our valued patner."
             else:

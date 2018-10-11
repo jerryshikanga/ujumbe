@@ -1,15 +1,19 @@
 from django.conf import settings
-from ujumbe.apps.weather.models import ForecastWeather
+import humanize
+from datetime import timedelta
+
+ForecastPeriods = [
+    timedelta(days=5),
+    timedelta(days=16),
+]
 
 
-def get_weather_forecast_periods():
-    periods = ForecastWeather.PeriodOptions.choices
+def get_ussd_formatted_weather_forecast_periods():
     string = ""
     counter = 0
-    for period in periods:
+    for option in ForecastPeriods:
+        string += "{}. {}.\n".format(counter, humanize.naturaldelta(option))
         counter += 1
-        text = str(period[0]).replace("-", " ")
-        string += "{}. {} \n".format(counter, text)
     return string
 
 

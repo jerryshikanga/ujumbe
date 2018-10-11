@@ -2,7 +2,7 @@ from author.decorators import with_author
 from django.db import models
 from django.utils import timezone
 from django_extensions.db.models import TimeStampedModel
-from djchoices import DjangoChoices, ChoiceItem
+import datetime
 
 
 # Create your models here.
@@ -35,6 +35,8 @@ class Location(TimeStampedModel):
     longitude = models.FloatField(blank=True, null=True)
     name = models.CharField(max_length=255, blank=False, null=False)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True)
+    owm_city_id = models.IntegerField(default=0, null=True, blank=True)
+    owm_details_set = models.BooleanField(default=False, null=False, blank=False)
 
     objects = LocationManager()
 
@@ -68,15 +70,19 @@ class LocationWeather(TimeStampedModel):
     humidity = models.IntegerField(default=0, null=False, blank=False)
     temp_min = models.IntegerField(default=0, null=False, blank=False)
     temp_max = models.IntegerField(default=0, null=False, blank=False)
-    visibility = models.IntegerField(default=0, null=False, blank=False)
+    visibility = models.IntegerField(default=0, null=True, blank=True)
     wind_speed = models.IntegerField(default=0, null=False, blank=False)
     wind_degree = models.IntegerField(default=0, null=False, blank=False)
     clouds_all = models.IntegerField(default=0, null=False, blank=False)
+    rain = models.FloatField(null=True, blank=True, default=0)
 
     class Meta(object):
         abstract = True
         verbose_name = "Weather"
         verbose_name_plural = "Weather"
+
+    def valid(self):
+        raise NotImplementedError("The valid method should be implemented")
 
     def __str__(self):
         return "Location {}, Summary {}, Temperature {}, Pressure {}, Humidity {}, Minimum temperature {} Maximum " \
@@ -121,6 +127,9 @@ class CurrentWeather(LocationWeather):
         verbose_name = "Current Weather"
         verbose_name_plural = "Current Weather"
 
+    def valid(self):
+        return datetime.datetime.now() - datetime.timedelta(hours=3) <= self.modified
+
     @property
     def description(self):
         return "Current weather {}".format(super(CurrentWeather, self).description)
@@ -130,36 +139,9 @@ class CurrentWeather(LocationWeather):
         return "Current weather {}".format(super(CurrentWeather, self).detailed)
 
 
-class ForecastWeatherManager(models.Manager):
-    def valid(self):
-        queryset = super(ForecastWeatherManager, self).get_queryset()
-        timenow = timezone.now()
-        return_data = []
-        for weather_item in queryset:
-            if timenow <= (weather_item.created + weather_item.period):
-                return_data.append(weather_item)
-        return return_data
-
-    def expired(self):
-        queryset = super(ForecastWeatherManager, self).get_queryset()
-        timenow = timezone.now()
-        return_data = []
-        for weather_item in queryset:
-            if timenow > (weather_item.created + weather_item.period):
-                return_data.append(weather_item)
-        return return_data
-
-
 class ForecastWeather(LocationWeather):
-    class PeriodOptions(DjangoChoices):
-        hour1 = ChoiceItem("1-Hour")
-        hour12 = ChoiceItem("12-Hours")
-        day1 = ChoiceItem("1-Day")
-        week = ChoiceItem("1-Week")
-        month = ChoiceItem("1-Month")
-    period = models.CharField(max_length=100, null=False, blank=False, choices=PeriodOptions.choices)
-
-    objects = ForecastWeatherManager()
+    period = models.DurationField(null=False, blank=False)
+    forecast_time = models.DateTimeField(null=False, blank=False, default=timezone.now)
 
     class Meta(object):
         verbose_name = "Forecast Weather"
@@ -172,3 +154,6 @@ class ForecastWeather(LocationWeather):
     @property
     def detailed(self):
         return "Forecast for {}, {}".format(self.period, super(ForecastWeather, self).detailed)
+
+    def valid(self):
+        return datetime.datetime.now() <= (self.forecast_time + self.period)

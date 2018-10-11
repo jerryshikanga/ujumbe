@@ -1,66 +1,92 @@
 import logging
 import requests
+from datetime import timedelta
 from celery import task
 from django.conf import settings
 from django.utils import timezone
 from ujumbe.apps.profiles.tasks import send_sms
-from ujumbe.apps.weather.models import Location, CurrentWeather
+from ujumbe.apps.weather.models import Location, CurrentWeather, ForecastWeather
 from ujumbe.apps.profiles.models import Subscription
 
 open_weather_app_id = settings.OPEN_WEATHER_APP_ID
 
 
 @task
-def get_current_weather(latitude: int, longitude: int):
-    url = "api.openweathermap.org/data/2.5/weather"
+def update_location_forecast_weather(location_id: int, period_hours: int):
+    """
+    get the docs at https://openweathermap.org/forecast5
+    """
+    # currently open weather supports 5 day period only so period_hours param not used
+    url = "https://api.openweathermap.org/data/2.5/forecast"
+    location = Location.objects.get(id=location_id)
     data = {
-        "lat": latitude,
-        "lon": longitude,
         "APPID": open_weather_app_id,
         "units": "metric"
     }
+    if location.owm_details_set:
+        data.update({"id": location.owm_city_id})
+    else:
+        data.update({"q": location.get_name_with_country_code()})
     response = requests.get(url=url, params=data)
-    timenow = timezone.now()
     if response.ok:
         response_json = response.json()
-        location, created = Location.objects.get_or_create(
-            latitude=response_json["coord"]["lat"],
-            longitude=response_json["coord"]["lon"]
-        )
-        weather, created = CurrentWeather.objects.get_or_create(location=location)
-        weather.description = response_json["weather"]["main"]
-        weather.temperature = response_json["main"]["temp"]
-        weather.pressure = response_json["main"]["pressure"]
-        weather.humidity = response_json["main"]["humidity"]
-        weather.temp_min = response_json["main"]["temp_min"]
-        weather.temp_max = response_json["main"]["temp_max"]
-        weather.visibility = response_json["visibility"]
-        weather.wind_degree = response_json["wind"]["deg"]
-        weather.wind_speed = response_json["wind"]["speed"]
-        weather.clouds_all = response_json["clouds"]["all"]
-        weather.save()
 
+        if not location.owm_details_set:
+            location.name = response_json["city"]["name"]
+            location.owm_city_id = response_json["city"]["id"]
+            location.longitude = response_json["city"]["coord"]["lon"]
+            location.latitude = response_json["city"]["coord"]["lat"]
+            location.save()
+
+        weather, _ = ForecastWeather.objects.get_or_create(location=location, period=timedelta(hours=period_hours))
+
+        weather.forecast_time = response_json["list"]["dt"]
+        weather.description = response_json["list"]["weather"]["description"]
+        weather.temperature = response_json["list"]["main"]["temp"]
+        weather.pressure = response_json["list"]["main"]["pressure"]
+        weather.humidity = response_json["list"]["main"]["humidity"]
+        weather.temp_min = response_json["list"]["main"]["temp_min"]
+        weather.temp_max = response_json["list"]["main"]["temp_max"]
+        # weather.visibility = response_json["visibility"] removed as it is not provided in api docs
+        weather.wind_degree = response_json["list"]["wind"]["deg"]
+        weather.wind_speed = response_json["list"]["wind"]["speed"]
+        weather.clouds_all = response_json["list"]["clouds"]["all"]
+        weather.rain = response_json["list"]["rain"]
+        weather.save()
+        return weather
     else:
-        logging.warning("Request at {} failed with status {} and message {}".format(str(timenow), response.status_code,
-                                                                                    response.text))
+        logging.warning(
+            "Request at {} failed with status {} and message {}".format(str(timezone.now()), response.status_code,
+                                                                        response.text))
+
+    return None
 
 
 @task
-def update_location_current_weather(location: Location):
+def update_location_current_weather(location_id: int):
+    """
+    get the docs at https://openweathermap.org/current
+    """
+    location = Location.objects.get(id=location_id)
     url = "https://api.openweathermap.org/data/2.5/weather"
     data = {
-        "q": location.get_name_with_country_code(),
         "APPID": open_weather_app_id,
         "units": "metric"
     }
+    if location.owm_details_set:
+        data.update({"id": location.owm_city_id})
+    else:
+        data.update({"q": location.get_name_with_country_code()})
     response = requests.get(url=url, params=data)
-    timenow = timezone.now()
+
     if response.ok:
         response_json = response.json()
-        location, created = Location.objects.get_or_create(
-            latitude=response_json["coord"]["lat"],
-            longitude=response_json["coord"]["lon"]
-        )
+        if not location.owm_details_set:
+            location.name = response_json["name"]
+            location.owm_city_id = response_json["id"]
+            location.longitude = response_json["coord"]["lon"]
+            location.latitude = response_json["coord"]["lat"]
+            location.save()
         weather, created = CurrentWeather.objects.get_or_create(location=location)
         weather.description = response_json["weather"]["main"]
         weather.temperature = response_json["main"]["temp"]
@@ -75,25 +101,9 @@ def update_location_current_weather(location: Location):
         weather.save()
         return weather
     else:
-        logging.warning("Request at {} failed with status {} and message {}".format(str(timenow), response.status_code,
+        logging.warning("Request at {} failed with status {} and message {}".format(str(timezone.now()), response.status_code,
                                                                                     response.text))
         return None
-
-
-@task
-def run_weather_checks_by_name():
-    inhabited_locations_with_active_subscriptions = Location.objects.with_active_subscription()
-    for location in inhabited_locations_with_active_subscriptions:
-        try:
-            update_location_current_weather(location)
-            message = "{} for {} run successfully".format(str(run_weather_checks_by_name.__name__), str(location))
-            print(message)
-            logging.info(message)
-        except Exception as e:
-            message = "Failed to run {} for {}. Error {}".format(str(run_weather_checks_by_name.__name__),
-                                                                 str(location), str(e))
-            print(message)
-            logging.warning(message)
 
 
 @task
@@ -108,23 +118,32 @@ def send_user_current_location_weather(phonenumber: str, location_id: int = None
         weather = CurrentWeather.objects.filter(location=location).first()
     else:
         CurrentWeather.objects.create(location=location)
-        weather = update_location_current_weather(location=location)
+        weather = update_location_current_weather(location_id=location.id)
+    if not weather.valid():
+        update_location_current_weather(location_id=location_id)
+        weather.refresh_from_db()
     send_sms.delay(phonenumber=phonenumber, text=weather.detailed)
 
 
 @task
-def send_user_forecast_weather_location(phonenumber: str, location_id: int, period : int):
+def send_user_forecast_weather_location(phonenumber: str, location_id: int, period_hours: int):
     if location_id is None:
         from ujumbe.apps.profiles.models import Profile
         profile = Profile.objects.filter(telephone=phonenumber).first()
         location = profile.location
     else:
         location = Location.objects.get(id=location_id)
-    # TODO : Complete implementation
+    weather = ForecastWeather.objects.filter(location=location, period=timedelta(hours=period_hours)).first()
+    weather = weather if weather is not None else update_location_forecast_weather(location_id=location.id,
+                                                                                   period_hours=period_hours)
+    if not weather.valid():
+        update_location_forecast_weather(location_id=location_id, period_hours=period_hours)
+        weather.refresh_from_db()
+    send_sms.delay(phonenumber=phonenumber, text=weather.detailed)
 
 
 @task
-def send_user_subscriptions(phonenumber : str):
+def send_user_subscriptions(phonenumber: str):
     subscriptions = Subscription.objects.for_phonenumber(phonenumber)
     text = ""
     for s in subscriptions:
