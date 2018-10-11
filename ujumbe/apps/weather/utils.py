@@ -1,19 +1,15 @@
 from django.conf import settings
+from ujumbe.apps.weather.models import ForecastWeather
 
 
 def get_weather_forecast_periods():
-    periods = []
-    periods.append("1 Hour")
-    periods.append("12 Hours")
-    periods.append("1 Day")
-    periods.append("1 Week")
-    periods.append("1 Month")
-
+    periods = ForecastWeather.PeriodOptions.choices
     string = ""
     counter = 0
     for period in periods:
-        string += "{}. {}\n".format(counter, period)
         counter += 1
+        text = str(period[0]).replace("-", " ")
+        string += "{}. {} \n".format(counter, text)
     return string
 
 

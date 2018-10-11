@@ -4,6 +4,7 @@ from ujumbe.apps.profiles.models import Profile
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 import json
+import re
 import datetime
 from django.urls import reverse
 from django_dynamic_fixture import G
@@ -12,7 +13,7 @@ User = get_user_model()
 
 
 # Create your tests here.
-class AfricastalkingViewTests(TestCase):
+class MessageTests(TestCase):
     def setUp(self):
         self.phonenumber = "+254792651659"
         self.at_shortcode = 20880
@@ -42,7 +43,7 @@ class AfricastalkingViewTests(TestCase):
         Profile.objects.create(user=user, telephone=self.phonenumber)
         text = "TEST JERRY SHIKANGA"
         at_id = get_random_string(10)
-        linkId = get_random_string(15)
+        link_id = get_random_string(15)
         time = (datetime.datetime.now() - datetime.timedelta(minutes=1)).strftime("%Y-%m-%d %H:%M:%S")
         url = reverse("africastalking:at_message_callback_view")
         post_data = {
@@ -51,7 +52,7 @@ class AfricastalkingViewTests(TestCase):
             "text": text,
             "date": time,
             "id": at_id,
-            "linkId": linkId
+            "linkId": link_id
         }
         post_data = json.dumps(post_data)
         self.client.post(url, data=post_data, content_type="application/json")
@@ -60,4 +61,11 @@ class AfricastalkingViewTests(TestCase):
         self.assertTrue(Profile.objects.filter(telephone=self.phonenumber).exists(), "Profile obj not created")
 
 
-
+class UssdTests(TestCase):
+    def test_re_pattern_match(self):
+        code = "1*2*kaka"
+        match = re.match(r"\d\*\d\*\w+", code)
+        self.assertIsNotNone(match)
+        code = "2*1*kakamega*1"
+        match = re.match(r"2\*1\*\w+\*\d", code)
+        self.assertIsNotNone(match)

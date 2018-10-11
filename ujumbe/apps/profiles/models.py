@@ -52,6 +52,10 @@ class AccountCharges(TimeStampedModel):
 
 
 class SubscriptionManager(models.Manager):
+    def for_phonenumber(self, phonenumber: str):
+        profile = Profile.objects.filter(telephone=phonenumber).first()
+        return super(SubscriptionManager, self).get_queryset().filter(profile=profile)
+
     def active(self):
         return super(SubscriptionManager, self).get_queryset().filter(active=True)
 
@@ -65,7 +69,8 @@ class Subscription(TimeStampedModel):
         forecast = ChoiceItem("FORECAST")
         current = ChoiceItem("CURRENT")
 
-    subscription_type = models.CharField(choices=SubscriptionTypes.choices, default=SubscriptionTypes.forecast, null=False, blank=False,
+    subscription_type = models.CharField(choices=SubscriptionTypes.choices, default=SubscriptionTypes.forecast,
+                                         null=False, blank=False,
                                          max_length=50)
     profile = models.ForeignKey(Profile, null=False, blank=False, on_delete=models.CASCADE)
     frequency = models.TimeField(null=False, blank=False)
@@ -76,8 +81,9 @@ class Subscription(TimeStampedModel):
     objects = SubscriptionManager()
 
     def __str__(self):
-        return "User {} subscription for {} of frequency {}".format(self.profile.full_name, self.subscription_type,
-                                                                    self.frequency)
+        text = "Active " if self.active else "Inactive"
+        return "{} subscription for {} of frequency {}".format(text, self.subscription_type,
+                                                               self.frequency)
 
     @property
     def sms_description(self):

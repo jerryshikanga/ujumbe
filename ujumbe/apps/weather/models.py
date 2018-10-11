@@ -2,6 +2,7 @@ from author.decorators import with_author
 from django.db import models
 from django.utils import timezone
 from django_extensions.db.models import TimeStampedModel
+from djchoices import DjangoChoices, ChoiceItem
 
 
 # Create your models here.
@@ -150,7 +151,13 @@ class ForecastWeatherManager(models.Manager):
 
 
 class ForecastWeather(LocationWeather):
-    period = models.DurationField(null=False, blank=False)
+    class PeriodOptions(DjangoChoices):
+        hour1 = ChoiceItem("1-Hour")
+        hour12 = ChoiceItem("12-Hours")
+        day1 = ChoiceItem("1-Day")
+        week = ChoiceItem("1-Week")
+        month = ChoiceItem("1-Month")
+    period = models.CharField(max_length=100, null=False, blank=False, choices=PeriodOptions.choices)
 
     objects = ForecastWeatherManager()
 

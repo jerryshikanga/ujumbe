@@ -5,6 +5,7 @@ from django.conf import settings
 from django.utils import timezone
 from ujumbe.apps.profiles.tasks import send_sms
 from ujumbe.apps.weather.models import Location, CurrentWeather
+from ujumbe.apps.profiles.models import Subscription
 
 open_weather_app_id = settings.OPEN_WEATHER_APP_ID
 
@@ -110,3 +111,22 @@ def send_user_current_location_weather(phonenumber: str, location_id: int = None
         weather = update_location_current_weather(location=location)
     send_sms.delay(phonenumber=phonenumber, text=weather.detailed)
 
+
+@task
+def send_user_forecast_weather_location(phonenumber: str, location_id: int, period : int):
+    if location_id is None:
+        from ujumbe.apps.profiles.models import Profile
+        profile = Profile.objects.filter(telephone=phonenumber).first()
+        location = profile.location
+    else:
+        location = Location.objects.get(id=location_id)
+    # TODO : Complete implementation
+
+
+@task
+def send_user_subscriptions(phonenumber : str):
+    subscriptions = Subscription.objects.for_phonenumber(phonenumber)
+    text = ""
+    for s in subscriptions:
+        text += str(s)
+    send_sms.delay(phonenumber=phonenumber, text=text)

@@ -64,7 +64,7 @@ def send_sms(phonenumber: str, text: str):
     africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
     sms = africastalking.SMS
     # disabled to save on costs
-    response = sms.send(text, [phonenumber, ])
+    response = sms.send(text, [phonenumber, ],)
     status_code = int(response["SMSMessageData"]["Recipients"][0]["statusCode"])
     cost = str(response["SMSMessageData"]["Recipients"][0]["cost"])
 
@@ -79,7 +79,7 @@ def send_sms(phonenumber: str, text: str):
         handler=Message.MessageProviders.Africastalking
     )
 
-    if status_code == 0:
+    if status_code == 101:
         profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
             telephone=phonenumber).exists() else None
         if profile is not None:
@@ -97,3 +97,28 @@ def send_sms(phonenumber: str, text: str):
     else:
         logging.warning("Failed to send message Status code {} {} ".format(str(status_code), str(outgoing_sms)))
         return False
+
+
+@task
+def create_user_subscription(phonenumber : str, location_id : int):
+    pass
+
+
+@task
+def end_user_subscription(phonumber : str, subscription_id : int):
+    pass
+
+
+@task
+def send_user_balance_notification(phonenumber: str):
+    pass
+
+
+@task
+def send_user_account_charges(phonenumber : str):
+    pass
+
+
+@task
+def set_user_location(location_name : str, phonenumber :str):
+    pass

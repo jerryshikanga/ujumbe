@@ -7,11 +7,14 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
 from djchoices import DjangoChoices, ChoiceItem
-from ujumbe.apps.weather.tasks import send_user_current_location_weather
+from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_user_forecast_weather_location, \
+    send_user_subscriptions
 from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession
 from ujumbe.apps.profiles.models import Profile, Subscription
-from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location
-from ujumbe.apps.weather.models import CurrentWeather, Location
+from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location, \
+    create_user_subscription, end_user_subscription, send_user_balance_notification, send_user_account_charges, \
+    set_user_location
+from ujumbe.apps.weather.models import CurrentWeather, Location, ForecastWeather
 from ujumbe.apps.weather.utils import get_weather_forecast_periods, get_location_not_found_response
 
 
@@ -154,8 +157,6 @@ class AtUssdcallbackView(View):
     def dispatch(self, *args, **kwargs):
         super(AtUssdcallbackView, self).dispatch(*args, **kwargs)
 
-
-
     def post(self, request, *args, **kwargs):
         # Reads the variables sent via POST
         data = json.loads(request.body)
@@ -201,7 +202,7 @@ class AtUssdcallbackView(View):
             elif text == "1*1":
                 data = "CON Enter location name."
 
-            elif re.match("1*1*", text) is not None and len(text.split("*")) == 3:
+            elif re.match("1\*1\*\w+", text) is not None and len(text.split("*")) == 3:
                 parts = text.split("*")
                 location = Location.try_resolve_location_by_name(name=parts[2])
                 if location is None:
@@ -219,7 +220,7 @@ class AtUssdcallbackView(View):
             elif text == "2*1":
                 data = "CON Enter location name."
 
-            elif re.match("2*1*", text) is not None and len(text.split("*")) == 3:
+            elif re.match(r"2\*1\*\w+", text) is not None and len(text.split("*")) == 3:
                 parts = text.split("*")
                 location = Location.try_resolve_location_by_name(name=parts[2])
                 if location is None:
@@ -232,8 +233,87 @@ class AtUssdcallbackView(View):
                 data = "CON Choose period."
                 data += get_weather_forecast_periods()
 
-            # TODO : Implement step when forecast data has been picked
-            # TODO : Implement Accounts
-            # TODO : Implement Subscriptions
+            elif re.match(r"2\*1\*\w+\*\d", text) is not None or re.match(r"2\*2\*\d", text) is not None:
+                parts = text.split("*")
+                if re.match(r"2\*1\*\w+\*\d", text) is not None:
+                    parts = text.split("*")
+                    location = Location.try_resolve_location_by_name(name=parts[2])
+                    period = parts[3]
+                elif re.match(r'2\*2\*d', text) is not None:
+                    location = profile.location
+                    period = parts[2]
+                else:
+                    location = None
+                    period = 0
+                period = ForecastWeather.PeriodOptions.choices[int(period) - 1]
+                send_user_forecast_weather_location.delay(location_id=location.id, phonenumber=phonenumber,
+                                                          period=period)
+                if location is not None and period != 0:
+                    data = "END Your request has been received for processing"
+                else:
+                    data = "END Invalid data. Please try again"
+
+            # Implement Subscriptions
+            elif text == "3":
+                data = "CON"
+                data += "1. View subscriptions \n"
+                data += "2. Add subscriptions \n"
+                data += "3. Unsubscribe \n"
+            elif text == "3*1":
+                data = "END Your request has been received successfully."
+                send_user_subscriptions.delay(phonenumber=phonenumber)
+            elif text == "3*2":
+                data = "CON Choose Frequency"
+                data += get_weather_forecast_periods()
+            elif re.match("3\*2\*\d", text):
+                data = "CON Choose Period"
+                data += get_weather_forecast_periods()
+            elif re.match("3\*2\*\d*\d", text):
+                data = "CON Choose Location"
+            elif re.match("3\*2\*\d\*\d\*\w+", text):
+                parts = text.split("*")
+                location = Location.try_resolve_location_by_name(name=parts[4])
+                if location is not None:
+                    data = "END Your request has been recieved and will be processed."
+                    create_user_subscription.delay(phonenumber=phonenumber, location_id=location.id)
+                else:
+                    data = "END {}".format(get_location_not_found_response(parts[4]))
+            elif text == "3*3":
+                data = "CON Choose Option to Unsubscribe"
+                subscriptions = Subscription.objects.for_phonenumber(phonenumber)
+                for s in subscriptions:
+                    data += "{}. {}\n".format(s.id, str(s))
+            elif re.match("3\*3\*\d", text):
+                parts = text.split("*")
+                end_user_subscription.delay(phonenumber=phonenumber, subscription_id=(int(parts[2])))
+                data = "END Request received successfully."
+
+            # Implement Accounts
+            elif text == "4":
+                data = "CON Welcome to your account. Choose an option.\n"
+                data += "1. View Balance\n"
+                data += "2. View Charges\n"
+                data += "3. Update location\n"
+
+            elif text == "4*1":
+                data = "END Request received successfully."
+                send_user_balance_notification.delay(phonenumber=phonenumber)
+            elif text == "4*2":
+                data = "END Request received successfully."
+                send_user_account_charges.delay(phonenumber=phonenumber)
+            elif text == "4*3":
+                data = "CON Enter location name."
+            elif re.match("4\*2\*\w+", text):
+                parts = text.split("*")
+                location = Location.try_resolve_location_by_name(name=parts[2])
+                if location is None:
+                    data = "END {}".format(get_location_not_found_response(parts[2]))
+                else:
+                    data = "END Request received successfully."
+                    set_user_location.delay(phonenumber=phonenumber, location_name=parts[2])
+            elif text == "99":
+                data = "END Thank you and goodbye our valued patner."
+            else:
+                data = "END Invalid Response."
 
         return HttpResponse(status=200, content_type="text/plain", content=data)
