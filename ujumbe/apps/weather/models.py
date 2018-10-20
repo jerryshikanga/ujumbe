@@ -2,6 +2,7 @@ from author.decorators import with_author
 from django.db import models
 from django.utils import timezone
 from django_extensions.db.models import TimeStampedModel
+from djchoices import ChoiceItem, DjangoChoices
 import datetime
 
 
@@ -33,6 +34,11 @@ class LocationManager(models.Manager):
 class Location(TimeStampedModel):
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
+    altitude = models.FloatField(blank=True, null=True)
+    lat_ne = models.FloatField(blank=True, null=True)
+    lat_sw = models.FloatField(blank=True, null=True)
+    lon_ne = models.FloatField(blank=True, null=True)
+    lon_sw = models.FloatField(blank=True, null=True)
     name = models.CharField(max_length=255, blank=False, null=False)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True)
     owm_city_id = models.IntegerField(default=0, null=True, blank=True)
@@ -63,6 +69,10 @@ class Location(TimeStampedModel):
 
 
 class LocationWeather(TimeStampedModel):
+    class WeatherHandlers(DjangoChoices):
+        netatmo = ChoiceItem("NETATMO")
+        openweather = ChoiceItem("OPENWEATHER")
+    handler = models.CharField(blank=False, null=False, choices=WeatherHandlers.choices, max_length=30)
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
     summary = models.CharField(max_length=255, null=False, blank=False, default="")
     temperature = models.IntegerField(default=0, null=False, blank=False)
