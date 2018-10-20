@@ -55,7 +55,7 @@ if "SUPPORT" not in config:
     raise ValueError(message)
 
 CUSTOMER_SUPPORT_PHONE = config["SUPPORT"]["phone"]
-CUSTOMER_SUPPORT_EMAIL = config["SUPPORT"]["email"]\
+CUSTOMER_SUPPORT_EMAIL = config["SUPPORT"]["email"]
 
 
 if "NETATMO" not in config:

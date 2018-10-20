@@ -33,6 +33,7 @@ class LocationManager(models.Manager):
 class Location(TimeStampedModel):
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
+    altitude = models.FloatField(blank=True, null=True)
     lat_ne = models.FloatField(blank=True, null=True)
     lat_sw = models.FloatField(blank=True, null=True)
     lon_ne = models.FloatField(blank=True, null=True)
