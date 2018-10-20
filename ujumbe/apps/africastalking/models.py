@@ -47,7 +47,22 @@ class OutgoingMessages(Message):
 
 @with_author
 class UssdSession(TimeStampedModel):
-    session_id = models.CharField(max_length=100, null=True, blank=True)
+    session_id = models.CharField(max_length=100, null=True, blank=True, unique=True)
     phonenumber = models.CharField(max_length=34, null=True, blank=True)
     service_code = models.CharField(max_length=10, null=True, blank=True)
     text = models.TextField(null=True, blank=True)
+    last_response = models.TextField(null=True, blank=True)
+
+    class Meta(object):
+        verbose_name_plural = "Ussd Sessions"
+        verbose_name = "Ussd Session"
+        ordering = ["modified", ]
+
+    def __str__(self):
+        return "{} {} {}".format(self.phonenumber, self.modified, self.text)
+
+    def update_last_response(self, response = None):
+        if response is not None:
+            self.last_response = response
+            self.save()
+        return

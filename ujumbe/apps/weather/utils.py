@@ -18,9 +18,9 @@ def get_ussd_formatted_weather_forecast_periods():
 
 
 def get_location_not_found_response(location_name: str = None):
-    string = "Location"
+    string = "Location "
     if location_name is not None:
         string += location_name
-    string += "could not be determined. Please contact {} or {} to add it to our system.".format(
+    string += " could not be determined. Please contact {} or {} to add it to our system.".format(
         settings.CUSTOMER_SUPPORT_PHONE, settings.CUSTOMER_SUPPORT_EMAIL)
     return string
