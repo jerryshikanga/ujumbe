@@ -94,17 +94,7 @@ def create_super_user_with_profile(username: str, password: str, email: str, fir
 
 
 def create_celery_beat_tasks():
-    from django_celery_beat.models import IntervalSchedule, PeriodicTask
-    schedule, created = IntervalSchedule.objects.get_or_create(
-        every=10,
-        period=IntervalSchedule.SECONDS
-    )
-
-    PeriodicTask.objects.get_or_create(
-        interval=schedule,
-        name="Get Current Weather By Location Name",
-        task="ujumbe.apps.weather.tasks.run_weather_checks_by_name",
-    )
+    pass
 
 
 def run():
