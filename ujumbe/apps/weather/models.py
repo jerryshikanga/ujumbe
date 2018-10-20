@@ -33,6 +33,10 @@ class LocationManager(models.Manager):
 class Location(TimeStampedModel):
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
+    lat_ne = models.FloatField(blank=True, null=True)
+    lat_sw = models.FloatField(blank=True, null=True)
+    lon_ne = models.FloatField(blank=True, null=True)
+    lon_sw = models.FloatField(blank=True, null=True)
     name = models.CharField(max_length=255, blank=False, null=False)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True)
     owm_city_id = models.IntegerField(default=0, null=True, blank=True)

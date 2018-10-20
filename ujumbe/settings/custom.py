@@ -55,4 +55,16 @@ if "SUPPORT" not in config:
     raise ValueError(message)
 
 CUSTOMER_SUPPORT_PHONE = config["SUPPORT"]["phone"]
-CUSTOMER_SUPPORT_EMAIL = config["SUPPORT"]["email"]
+CUSTOMER_SUPPORT_EMAIL = config["SUPPORT"]["email"]\
+
+
+if "NETATMO" not in config:
+    message = "Netatmo config options missing in config file"
+    logging.error(message)
+    raise ValueError(message)
+
+
+NETATMO_USERNAME = config["NETATMO"]["username"]
+NETATMO_PASSWORD = config["NETATMO"]["password"]
+NETATMO_CLIENT_ID = config["NETATMO"]["client_id"]
+NETATMO_CLIENT_SECRET = config["NETATMO"]["client_secret"]
