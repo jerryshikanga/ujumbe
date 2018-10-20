@@ -2,6 +2,7 @@ from author.decorators import with_author
 from django.db import models
 from django.utils import timezone
 from django_extensions.db.models import TimeStampedModel
+from djchoices import ChoiceItem, DjangoChoices
 import datetime
 
 
@@ -68,6 +69,10 @@ class Location(TimeStampedModel):
 
 
 class LocationWeather(TimeStampedModel):
+    class WeatherHandlers(DjangoChoices):
+        netatmo = ChoiceItem("NETATMO")
+        openweather = ChoiceItem("OPENWEATHER")
+    handler = models.CharField(blank=False, null=False, choices=WeatherHandlers.choices, max_length=30)
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
     summary = models.CharField(max_length=255, null=False, blank=False, default="")
     temperature = models.IntegerField(default=0, null=False, blank=False)

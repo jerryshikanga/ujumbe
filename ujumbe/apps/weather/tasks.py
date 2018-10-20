@@ -6,7 +6,7 @@ from celery import task
 from django.conf import settings
 from django.utils import timezone
 from ujumbe.apps.profiles.tasks import send_sms
-from ujumbe.apps.weather.models import Location, CurrentWeather, ForecastWeather
+from ujumbe.apps.weather.models import Location, CurrentWeather, ForecastWeather, LocationWeather
 from ujumbe.apps.profiles.models import Subscription
 
 open_weather_app_id = settings.OPEN_WEATHER_APP_ID
@@ -41,6 +41,7 @@ def update_location_forecast_weather_via_open_weather(location_id: int, period_h
 
         weather, _ = ForecastWeather.objects.get_or_create(location=location, period=timedelta(hours=period_hours))
 
+        weather.handler = LocationWeather.WeatherHandlers.openweather
         weather.forecast_time = response_json["list"]["dt"]
         weather.description = response_json["list"]["weather"]["description"]
         weather.temperature = response_json["list"]["main"]["temp"]
@@ -89,6 +90,7 @@ def update_location_current_weather_via_open_weather(location_id: int):
             location.latitude = response_json["coord"]["lat"]
             location.save()
         weather, created = CurrentWeather.objects.get_or_create(location=location)
+        weather.handler = LocationWeather.WeatherHandlers.openweather
         weather.description = response_json["weather"]["main"]
         weather.temperature = response_json["main"]["temp"]
         weather.pressure = response_json["main"]["pressure"]
@@ -140,6 +142,8 @@ def update_location_current_weather_via_netatmo(location_id: int):
     }
     # issue the API request
     region_data = client.Getpublicdata(region=region)
+
+    # weather.handler = LocationWeather.WeatherHandlers.netatmo
     raise NotImplementedError("this function is not complete")
 
 
