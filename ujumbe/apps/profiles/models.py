@@ -5,6 +5,8 @@ from django_extensions.db.models import TimeStampedModel
 from author.decorators import with_author
 from ujumbe.apps.weather.models import Location
 from djchoices import DjangoChoices, ChoiceItem
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 # Create your models here.
 User = get_user_model()
@@ -39,7 +41,9 @@ class Profile(TimeStampedModel):
 
 @with_author
 class AccountCharges(TimeStampedModel):
-    cost = models.IntegerField(null=False, blank=False)
+
+    cost = models.FloatField(null=False, blank=False)
+    currency_code = models.CharField(null=False, blank=False, default="KES", max_length=5)
     profile = models.ForeignKey(Profile, null=True, blank=True, on_delete=models.SET_NULL)
     description = models.TextField(null=True, blank=True)
 
@@ -49,6 +53,13 @@ class AccountCharges(TimeStampedModel):
     class Meta:
         verbose_name_plural = "Charges"
         verbose_name = "Charge"
+
+
+@receiver(post_save, sender=AccountCharges)
+def update_balance_on_charge(sender, instance, created, **kwargs):
+    if created:
+        instance.profile.balance -= instance.cost
+        instance.profile.save()
 
 
 class SubscriptionManager(models.Manager):

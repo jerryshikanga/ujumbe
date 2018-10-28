@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from ujumbe.apps.weather.models import Location
 from ujumbe.apps.profiles.models import Profile, AccountCharges, Subscription
-from ujumbe.apps.africastalking.models import OutgoingMessages
+from ujumbe.apps.africastalking.models import OutgoingMessages, Message
 from ujumbe.apps.weather.utils import ForecastPeriods
 import africastalking
 import logging
@@ -65,43 +65,41 @@ def update_profile_location(phonenumber: str, location_name):
 
 @task
 def send_sms(phonenumber: str, text: str):
-    africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
-    sms = africastalking.SMS
-    # disabled to save on costs
-    response = sms.send(text, [phonenumber, ], )
-    status_code = int(response["SMSMessageData"]["Recipients"][0]["statusCode"])
-    cost = str(response["SMSMessageData"]["Recipients"][0]["cost"])
+    try:
+        africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
+        sms = africastalking.SMS
+        response = sms.send(text, [phonenumber, ], )
+        message_data = response["SMSMessageData"]["Recipients"][0]# only one recipient
+        status_code = message_data["statusCode"]
+        cost_str = message_data["cost"]
+        cost_str_parts = str(cost_str).split(" ")
+        currency_code = cost_str_parts[0]
+        cost = cost_str_parts[1]
+        status = message_data["status"]
+        africastalking_id = message_data["messageId"]
 
-    # cost = 0
-    # status_code = 101
-
-    from ujumbe.apps.africastalking.models import Message
-    outgoing_sms = OutgoingMessages.objects.create(
-        phonenumber=phonenumber,
-        cost=cost,
-        text=text,
-        handler=Message.MessageProviders.Africastalking
-    )
-
-    if status_code == 101:
         profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
             telephone=phonenumber).exists() else None
-        if profile is not None:
-            profile.balance -= cost
-            profile.save()
-        AccountCharges.objects.create(
+        charge = AccountCharges.objects.create(
             profile=profile,
             cost=cost,
-            description=outgoing_sms.summary
+            currency_code=currency_code,
         )
+        outgoing_sms = OutgoingMessages.objects.create(
+            phonenumber=phonenumber,
+            text=text,
+            handler=Message.MessageProviders.Africastalking,
+            delivery_status=status,
+            provider_id=africastalking_id,
+            charge=charge
+        )
+        charge.description = outgoing_sms.summary
+        charge.save()
 
-        outgoing_sms.delivery_status = OutgoingMessages.MessageDeliveryStatus.Sent
-        outgoing_sms.save()
-        return True
-    else:
-        logging.warning("Failed to send message Status code {} {} ".format(str(status_code), str(outgoing_sms)))
-        return False
-
+        return outgoing_sms
+    except Exception as e:
+        message = "Failed to send message. Error {}".format(str(e))
+        logging.warning(message)
 
 @task
 def create_user_forecast_subscription(phonenumber: str, location_id: int, frequency: int):

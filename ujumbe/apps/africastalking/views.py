@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -9,7 +10,7 @@ from django.views.generic import View
 from djchoices import DjangoChoices, ChoiceItem
 from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_user_forecast_weather_location, \
     send_user_subscriptions
-from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession
+from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession, OutgoingMessages, Message
 from ujumbe.apps.profiles.models import Profile, Subscription
 from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location, \
     create_user_forecast_subscription, end_user_subscription, send_user_balance_notification, send_user_account_charges, \
@@ -28,10 +29,10 @@ class MessageKeywords(DjangoChoices):
     Forecast = ChoiceItem("FORECAST")
 
 
-class ATMessageCallbackView(View):
+class ATIncomingMessageCallbackView(View):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
-        return super(ATMessageCallbackView, self).dispatch(*args, **kwargs)
+        return super(ATIncomingMessageCallbackView, self).dispatch(*args, **kwargs)
 
     def get_incoming_message_object(self, request_data):
         from_telephone = request_data.get("from", None)
@@ -42,16 +43,16 @@ class ATMessageCallbackView(View):
         link_id = request_data.get("linkId", None)
 
         # save message if not exist
-        if not IncomingMessage.objects.filter(africastalking_id=africastalking_id).exists():
+        if not IncomingMessage.objects.filter(provider_id=africastalking_id).exists():
             incoming_message = IncomingMessage.objects.create(
                 phonenumber=from_telephone,
                 shortcode=to_telephone,
                 text=text,
-                africastalking_id=africastalking_id,
+                provider_id=africastalking_id,
                 link_id=link_id,
             )
         else:
-            incoming_message = IncomingMessage.objects.filter(africastalking_id=africastalking_id).first()
+            incoming_message = IncomingMessage.objects.filter(provider_id=africastalking_id).first()
             if from_telephone is not None:
                 incoming_message.phonenumber = from_telephone
             if to_telephone is not None:
@@ -151,12 +152,40 @@ class ATMessageCallbackView(View):
             return HttpResponse(status=400)
 
 
+class AtOutgoingSMSCallback(View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super(AtOutgoingSMSCallback, self).dispatch(*args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            request_data = json.loads(request.body)
+            phonenumber = request_data.get("phoneNumber", None)
+            status = request_data.get("status", None)
+            africastalking_id = request_data.get("id", None)
+            network_code = request_data.get("networkCode", None)
+
+            if phonenumber is None or status is None or africastalking_id is None or network_code is None:
+                raise ValueError("Please fill fields")
+
+            message = OutgoingMessages.objects.get(provider_id=africastalking_id, handler=Message.MessageProviders.Africastalking)
+            message.delivery_status = status
+            if status == "Failed" or status == "Rejected":
+                message.failure_reason = request_data.get("failureReason", None)
+            message.save()
+            return HttpResponse(status=200)
+
+        except Exception as e:
+            logging.error(e)
+            return HttpResponse(status=400)
+
+
 class AtUssdcallbackView(View):
     request_successful_response = "Your response has been recieved and will be processed. You will be notified via " \
                                   "SMS.\n "
     invalid_data_response = "You have entered invalid data. Please try again.\n"
 
-    def is_valid_str_response(self, data = None) :
+    def is_valid_str_response(self, data=None):
         if data is None:
             return False
         if not isinstance(data, str):
@@ -202,16 +231,18 @@ class AtUssdcallbackView(View):
                     response_text += "99. Exit\n"
                 elif text == "0":
                     response_text += "CON Enter your first name:"
-                elif re.match("0\*\w+", text) and len(parts)==2:
+                elif re.match("0\*\w+", text) and len(parts) == 2:
                     first_name = parts[1] if self.is_valid_str_response(parts[1]) else None
-                    response_text = "CON Enter last name " if first_name is not None else "END "+self.invalid_data_response
+                    response_text = "CON Enter last name " if first_name is not None else "END " + self.invalid_data_response
 
                 elif re.match("0\*\w+\*\w+", text) and len(parts) == 3:
                     last_name = parts[2] if parts[2] is not None else None
                     first_name = parts[1] if parts[1] is not None else None
-                    response_text = "END "+self.request_successful_response if self.is_valid_str_response(last_name) else "END "+self.invalid_data_response
+                    response_text = "END " + self.request_successful_response if self.is_valid_str_response(
+                        last_name) else "END " + self.invalid_data_response
                     if not Profile.objects.filter(telephone=phonenumber).exists():
-                        create_customer_account.delay(first_name=first_name, last_name=last_name, phonenumber=phonenumber)
+                        create_customer_account.delay(first_name=first_name, last_name=last_name,
+                                                      phonenumber=phonenumber)
                     else:
                         response_text = "END You already have an account."
             else:
@@ -351,7 +382,7 @@ class AtUssdcallbackView(View):
                 elif text == "99":
                     response_text = "END Thank you and goodbye our valued patner."
                 else:
-                    response_text = "END "+self.invalid_data_response
+                    response_text = "END " + self.invalid_data_response
             ussd_session.update_last_response(response_text)
             return HttpResponse(status=200, content_type="text/plain", content=response_text)
         except Exception as e:

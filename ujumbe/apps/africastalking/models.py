@@ -3,6 +3,7 @@ from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from author.decorators import with_author
 from djchoices import DjangoChoices, ChoiceItem
+from ujumbe.apps.profiles.models import AccountCharges
 
 
 # Create your models here.
@@ -13,7 +14,8 @@ class Message(TimeStampedModel):
 
     phonenumber = models.CharField(max_length=20, null=False, blank=False)
     text = models.TextField(null=False, blank=False)
-    handler = models.CharField(null=False, blank=False, choices=MessageProviders.choices, max_length=100, default=MessageProviders.Africastalking)
+    handler = models.CharField(null=False, blank=False, choices=MessageProviders.choices, max_length=100)
+    provider_id = models.CharField(max_length=255, null=False, blank=False)
 
     class Meta:
         abstract = True
@@ -27,8 +29,6 @@ class Message(TimeStampedModel):
 
 
 class IncomingMessage(Message):
-    """Will hold sent and received messages"""
-    africastalking_id = models.CharField(max_length=255, null=False, blank=False)
     link_id = models.CharField(max_length=255, null=True, blank=True)
     shortcode = models.CharField(max_length=10, null=False, blank=False)
 
@@ -36,13 +36,17 @@ class IncomingMessage(Message):
 @with_author
 class OutgoingMessages(Message):
     class MessageDeliveryStatus(DjangoChoices):
-        Failed = ChoiceItem("failed")
-        Sent = ChoiceItem("Sent")
+        failed = ChoiceItem("Failed")
+        sent = ChoiceItem("Sent")
         Delivered = ChoiceItem("Delivered")
-        Unknown = ChoiceItem("Unknown")
-    cost = models.CharField(null=False, blank=False, default="", max_length=10)
-    delivery_status = models.CharField(null=False, blank=False, max_length=20, choices=MessageDeliveryStatus.choices,
-                                       default="UNKNOWN")
+        submitted = ChoiceItem("Submitted")
+        buffered = ChoiceItem("Buffered")
+        rejected = ChoiceItem("Rejected")
+        success = ChoiceItem("Success")
+    charge = models.ForeignKey(AccountCharges, null=True, blank=True, on_delete=models.SET_NULL)
+    delivery_status = models.CharField(null=False, blank=False, max_length=50, choices=MessageDeliveryStatus.choices,
+                                       default=MessageDeliveryStatus.submitted)
+    failure_reason = models.CharField(null=True, blank=True, max_length=50)
 
 
 @with_author
