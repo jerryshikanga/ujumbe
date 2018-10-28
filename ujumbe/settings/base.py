@@ -31,7 +31,9 @@ SECRET_KEY = 'q0v5&f+s_cn)hlt7wy9#)cdm%94+_lqs0t+miv2xiwm)ei@$2h'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "shikanga.com",
+]
 
 # Application definition
 

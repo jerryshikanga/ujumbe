@@ -14,3 +14,4 @@ django-celery-beat==1.1.1
 phone-iso3166==0.3.5
 humanize==0.5.1
 patatmo==0.2.14
+pytest== 3.9.2

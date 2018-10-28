@@ -6,12 +6,19 @@ AFRICASTALKING_USERNAME = config['AFRICASTALKING']['username']
 AFRICASTALKING_API_KEY = config['AFRICASTALKING']['api_key']
 
 check_if_config_dict_exists(value_key="EMAIL", config_dict=config)
-EMAIL_HOST = config["EMAIL"]["host"]
-EMAIL_PORT = config["EMAIL"]["port"]
-EMAIL_HOST_USER = config["EMAIL"]["user"]
-EMAIL_HOST_PASSWORD = config["EMAIL"]["password"]
-EMAIL_USE_TLS = get_boolean_value_from_config(config["EMAIL"]["tls"])
-EMAIL_USE_SSL = get_boolean_value_from_config(config["EMAIL"]["ssl"])
+# EMAIL_HOST = config["EMAIL"]["host"]
+# EMAIL_PORT = config["EMAIL"]["port"]
+# EMAIL_HOST_USER = config["EMAIL"]["user"]
+# EMAIL_HOST_PASSWORD = config["EMAIL"]["password"]
+# EMAIL_USE_TLS = get_boolean_value_from_config(config["EMAIL"]["tls"])
+# EMAIL_USE_SSL = get_boolean_value_from_config(config["EMAIL"]["ssl"])
+
+EMAIL_HOST="smtp-mail.outlook.com"
+EMAIL_PORT="587"
+EMAIL_HOST_USER="Jerry.Lumbasi@Chebupharma.com"
+EMAIL_HOST_PASSWORD="Navalayo.1970"
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
 EMAIL_TIMEOUT = None
 
 DEFAULT_FROM_EMAIL = "admin@admin.com"

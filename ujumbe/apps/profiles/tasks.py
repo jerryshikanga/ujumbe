@@ -154,3 +154,10 @@ def set_user_location(location_id: int, phonenumber: str):
     else:
         text = "Your location has been set to {}.".format(str(l))
     send_sms.delay(phonenumber=phonenumber, text=text)
+
+
+@task
+def check_and_send_user_subscriptions():
+    message = "Sending subscriptions"
+    print(message)
+    logging.info(message)

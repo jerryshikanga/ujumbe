@@ -94,11 +94,22 @@ def create_super_user_with_profile(username: str, password: str, email: str, fir
 
 
 def create_celery_beat_tasks():
-    pass
+    from django_celery_beat.models import PeriodicTask, IntervalSchedule
+    # executes every 10 seconds.
+    schedule, created = IntervalSchedule.objects.get_or_create(
+        every=10,
+        period=IntervalSchedule.SECONDS
+    )
+    PeriodicTask.objects.get_or_create(
+        interval=schedule,
+        name="Check and send subscriptions",
+        task="ujumbe.apps.profiles.tasks.check_and_send_user_subscriptions"
+    )
 
 
 def run():
     create_countries()
     create_kenyan_counties()
-    create_super_user_with_profile(username="admin", password="password", email="jerryshikanga@gmail.com", first_name="Jerry", last_name="Shikanga", telephone="+254727447101")
+    create_super_user_with_profile(username="admin", password="password", email="jerryshikanga@gmail.com",
+                                   first_name="Jerry", last_name="Shikanga", telephone="+254727447101")
     create_celery_beat_tasks()
