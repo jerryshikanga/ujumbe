@@ -2,6 +2,7 @@
 *.xml
 .idea/*
 *.log
+*.env
 
 *.ini
 ujumbe/settings/config.ini
