@@ -10,23 +10,23 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
-import os, configparser, logging
-from ujumbe.settings import get_boolean_value_from_config
+import os
+import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# we will hold sensitive settings in a .ini file then read from it
-SETTINGS_INI_PATH = os.path.join(BASE_DIR, "settings", "config.ini")
-config = configparser.ConfigParser()
-config.read(SETTINGS_INI_PATH)
-config.sections()
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False)
+)
+environ.Env.read_env(env_file=os.path.join(BASE_DIR, "settings", "settings.env"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'q0v5&f+s_cn)hlt7wy9#)cdm%94+_lqs0t+miv2xiwm)ei@$2h'
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -94,9 +94,9 @@ WSGI_APPLICATION = 'ujumbe.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': config['DATABASE']['name'],
-        'USER': config['DATABASE']['user'],
-        'PASSWORD': config['DATABASE']['password']
+        'NAME': env("DEFAULT_DB_NAME"),
+        'USER': env("DEFAULT_DB_USER"),
+        'PASSWORD': env("DEFAULT_DB_PASSWORD")
     }
 }
 
