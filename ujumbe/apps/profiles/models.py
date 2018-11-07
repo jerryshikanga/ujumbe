@@ -58,7 +58,7 @@ class AccountCharges(TimeStampedModel):
 @receiver(post_save, sender=AccountCharges)
 def update_balance_on_charge(sender, instance, created, **kwargs):
     if created:
-        instance.profile.balance -= instance.cost
+        instance.profile.balance -= int(instance.cost)
         instance.profile.save()
 
 
