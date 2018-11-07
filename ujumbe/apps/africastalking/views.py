@@ -68,7 +68,7 @@ class ATIncomingMessageCallbackView(View):
 
     def post(self, request, *args, **kwargs):
         try:
-            request_data = json.loads(request.body)
+            request_data = json.loads(request.body.decode('utf-8'))
             incoming_message = self.get_incoming_message_object(request_data)
             parts = incoming_message.text.split(sep=" ")
             parts = [str(part).upper() for part in parts]
@@ -161,7 +161,7 @@ class AtOutgoingSMSCallback(View):
 
     def post(self, request, *args, **kwargs):
         try:
-            request_data = json.loads(request.body)
+            request_data = json.loads(request.body.decode('utf-8'))
             phonenumber = request_data.get("phoneNumber", None)
             status = request_data.get("status", None)
             africastalking_id = request_data.get("id", None)
@@ -201,7 +201,7 @@ class AtUssdcallbackView(View):
     def post(self, request, *args, **kwargs):
         try:
             # Reads the variables sent via POST
-            request_data = json.loads(request.body)
+            request_data = json.loads(request.body.decode('utf-8'))
             session_id = request_data.get("sessionId", None)
             service_code = request_data.get("serviceCode", None)
             phonenumber = request_data.get("phoneNumber", None)
