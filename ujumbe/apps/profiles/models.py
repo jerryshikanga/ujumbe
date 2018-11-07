@@ -18,7 +18,7 @@ class Profile(TimeStampedModel):
     user = models.OneToOneField(User, null=True, blank=True, on_delete=models.SET_NULL)
     telephone = models.CharField(max_length=15, null=False, blank=False, verbose_name="Telephone Number", unique=True)
     location = models.ForeignKey(Location, null=True, blank=True, on_delete=models.SET_NULL)
-    balance = models.IntegerField(default=0, null=False, blank=False)
+    balance = models.FloatField(default=0, null=False, blank=False)
 
     @property
     def full_name(self):
@@ -58,7 +58,7 @@ class AccountCharges(TimeStampedModel):
 @receiver(post_save, sender=AccountCharges)
 def update_balance_on_charge(sender, instance, created, **kwargs):
     if created:
-        instance.profile.balance -= int(instance.cost)
+        instance.profile.balance -= float(instance.cost)
         instance.profile.save()
 
 
