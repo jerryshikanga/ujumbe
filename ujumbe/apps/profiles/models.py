@@ -75,7 +75,7 @@ class SubscriptionManager(models.Manager):
 
     def due(self):
         time_now = datetime.datetime.now()
-        return Subscription.objects.active().filter(last_send__gte=time_now-F("frequency"))
+        return Subscription.objects.active().filter(last_send__lte=time_now-F("frequency"))
 
     def active(self):
         return super(SubscriptionManager, self).get_queryset().filter(active=True)
