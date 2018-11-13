@@ -1,12 +1,18 @@
+import datetime
+
 from django.db import models
+from django.db.models import F
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django_extensions.db.models import TimeStampedModel
 from author.decorators import with_author
-from ujumbe.apps.weather.models import Location
 from djchoices import DjangoChoices, ChoiceItem
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+
+from ujumbe.apps.weather.models import Location
+from ujumbe.apps.profiles.tasks import send_sms
 
 # Create your models here.
 User = get_user_model()
@@ -67,6 +73,10 @@ class SubscriptionManager(models.Manager):
         profile = Profile.objects.filter(telephone=phonenumber).first()
         return super(SubscriptionManager, self).get_queryset().filter(profile=profile)
 
+    def due(self):
+        time_now = datetime.datetime.now()
+        return Subscription.objects.active().filter(last_send__gte=time_now-F("frequency"))
+
     def active(self):
         return super(SubscriptionManager, self).get_queryset().filter(active=True)
 
@@ -97,6 +107,9 @@ class Subscription(TimeStampedModel):
     @property
     def sms_description(self):
         return "Subscription to {} frequency {}".format(self.profile.full_name, self.frequency)
+
+    def send_via_sms(self):
+        send_sms.delay(text=self.sms_description, phonenumber=self.profile.telephone)
 
     def deactivate(self):
         self.active = False
