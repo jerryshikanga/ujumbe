@@ -6,7 +6,6 @@ import re
 from django.http.response import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
 # from django.views.generic import View
 from rest_framework.views import View
 from djchoices import DjangoChoices, ChoiceItem
@@ -71,7 +70,7 @@ class ATIncomingMessageCallbackView(View):
         try:
             request_data = json.loads(request.body.decode('utf-8'))
             incoming_message = self.get_incoming_message_object(request_data)
-            parts = self.clean_if_shared(incoming_message.text).split(sep=" ")
+            parts = incoming_message.text.split(sep=" ")
             parts = [str(part).upper() for part in parts]
             keyword = parts[0]
 
@@ -154,12 +153,6 @@ class ATIncomingMessageCallbackView(View):
             logging.error(e)
             return HttpResponse(status=400)
 
-    def clean_if_shared(self, request_string):
-        if settings.AT_SMS_IS_SHARED:
-            return request_string.split(' ', 1)[1]
-        else:
-            return request_string
-
 
 class AtOutgoingSMSCallback(View):
     @method_decorator(csrf_exempt)
@@ -212,7 +205,7 @@ class AtUssdcallbackView(View):
             session_id = request_data.get("sessionId", None)
             service_code = request_data.get("serviceCode", None)
             phonenumber = request_data.get("phoneNumber", None)
-            text = self.clean_if_shared(request_data.get("text", ""))
+            text = request_data.get("text", "")
             text = str(text).strip()
             parts = text.split("*")
 
@@ -397,9 +390,3 @@ class AtUssdcallbackView(View):
         except Exception as e:
             logging.error(e)
             return HttpResponse(status=400)
-
-    def clean_if_shared(self, request_string):
-        if settings.AT_SMS_IS_SHARED:
-            return request_string.split(' ', 1)[1]
-        else:
-            return request_string
