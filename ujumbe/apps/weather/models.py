@@ -4,6 +4,8 @@ import logging
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from author.decorators import with_author
 from django_extensions.db.models import TimeStampedModel
@@ -130,6 +132,14 @@ class Location(TimeStampedModel):
         except Exception as e:
             logging.error(str(e))
             return None
+
+
+@receiver(signal=post_save, sender=Location)
+def check_and_update_location_by_google_maps(sender, instance, created, **kwargs):
+    if created:
+        if instance.googlemaps_place_id is None:
+            instance.geocode_location_by_google_maps()
+    return
 
 
 class LocationWeather(TimeStampedModel):
