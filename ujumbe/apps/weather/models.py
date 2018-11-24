@@ -1,9 +1,15 @@
-from author.decorators import with_author
+import datetime
+import logging
+
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
+
+from author.decorators import with_author
 from django_extensions.db.models import TimeStampedModel
 from djchoices import ChoiceItem, DjangoChoices
-import datetime
+
+import googlemaps
 
 
 # Create your models here.
@@ -35,14 +41,14 @@ class Location(TimeStampedModel):
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
     altitude = models.FloatField(blank=True, null=True)
-    lat_ne = models.FloatField(blank=True, null=True)
-    lat_sw = models.FloatField(blank=True, null=True)
-    lon_ne = models.FloatField(blank=True, null=True)
-    lon_sw = models.FloatField(blank=True, null=True)
+    bounds_northeast_latitude = models.FloatField(blank=True, null=True)
+    bounds_southwest_latitude = models.FloatField(blank=True, null=True)
+    bounds_northeast_longitude = models.FloatField(blank=True, null=True)
+    bounds_southwest_longitude = models.FloatField(blank=True, null=True)
     name = models.CharField(max_length=255, blank=False, null=False)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True)
     owm_city_id = models.IntegerField(default=0, null=True, blank=True)
-    owm_details_set = models.BooleanField(default=False, null=False, blank=False)
+    googlemaps_place_id = models.CharField(max_length=255, null=True, blank=True)
 
     objects = LocationManager()
 
@@ -61,11 +67,69 @@ class Location(TimeStampedModel):
         else:
             return "{}, {}".format(self.name, self.country.alpha2)
 
+    def get_name_with_country_name(self):
+        if self.country is None:
+            raise ValueError("Country cannot be blank")
+        else:
+            return "{}, {}".format(self.name, self.country.name)
+
+    def geocode_location_by_google_maps(self):
+        gmaps = googlemaps.Client(key=settings.GOOGLE_API_KEY)
+        geocode_result = gmaps.geocode(self.get_name_with_country_name())
+        try:
+            result = geocode_result[0]
+            geometry = result["geometry"]
+            location = geometry["location"]
+            bounds = geometry["bounds"]
+
+            self.latitude = location["lat"]
+            self.longitude = location["lng"]
+            self.bounds_northeast_longitude = bounds["northeast"]["lng"]
+            self.bounds_southwest_longitude = bounds["southwest"]["lng"]
+            self.bounds_northeast_latitude = bounds["northeast"]["lat"]
+            self.bounds_southwest_latitude = bounds["southwest"]["lat"]
+
+            self.googlemaps_place_id = result["place_id"]
+
+            self.save()
+
+        except Exception as e:
+            logging.error(str(e))
+
+
     @classmethod
     def try_resolve_location_by_name(cls, name: str, phonenumber: str):
         from phone_iso3166.country import phone_country
         country = Country.objects.filter(alpha2=phone_country(phonenumber)).first()
-        return Location.objects.in_country(country).filter(name__icontains=name).first()
+        location = Location.objects.in_country(country).filter(name__icontains=name).first()
+        if location is not None:
+            return location
+
+        gmaps = googlemaps.Client(key=settings.GOOGLE_API_KEY)
+        name += ", "+country.name
+        geocode_result = gmaps.geocode(name)
+        try:
+            result = geocode_result[0]
+            geometry = result["geometry"]
+            location = geometry["location"]
+            bounds = geometry["bounds"]
+
+            location_obj = Location()
+            location_obj.country = country
+            location_obj.latitude = location["lat"]
+            location_obj.longitude = location["lng"]
+            location_obj.bounds_northeast_longitude = bounds["northeast"]["lng"]
+            location_obj.bounds_southwest_longitude = bounds["southwest"]["lng"]
+            location_obj.bounds_northeast_latitude = bounds["northeast"]["lat"]
+            location_obj.bounds_southwest_latitude = bounds["southwest"]["lat"]
+
+            location_obj.googlemaps_place_id = result["place_id"]
+
+            location_obj.save()
+            return location
+        except Exception as e:
+            logging.error(str(e))
+            return None
 
 
 class LocationWeather(TimeStampedModel):
