@@ -1,17 +1,18 @@
 import datetime
 import logging
 
+import googlemaps
+import requests
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
 from author.decorators import with_author
 from django_extensions.db.models import TimeStampedModel
 from djchoices import ChoiceItem, DjangoChoices
 
-import googlemaps
+from ujumbe.apps.weather.handlers import OpenWeather, AccuWeather, NetAtmo
 
 
 # Create your models here.
@@ -51,6 +52,7 @@ class Location(TimeStampedModel):
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True)
     owm_city_id = models.IntegerField(default=0, null=True, blank=True)
     googlemaps_place_id = models.CharField(max_length=255, null=True, blank=True)
+    accuweather_city_id = models.CharField(max_length=255, null=True, blank=True)
 
     objects = LocationManager()
 
@@ -75,6 +77,22 @@ class Location(TimeStampedModel):
         else:
             return "{}, {}".format(self.name, self.country.name)
 
+    def set_accuweather_city_id(self):
+        # we currently use google maps to determine lat and lon so if gmaps id is set then they are valid
+        if self.googlemaps_place_id is None:
+            self.geocode_location_by_google_maps()
+        url = "http://dataservice.accuweather.com/locations/v1/cities/geoposition/search"
+        params = {
+            "apikey": settings.ACCUWEATHER_API_KEY,
+            "details": "false",
+            "q": "{},{}".format(self.latitude, self.longitude),
+            "language": "en-us",
+            "topelevel": "false"
+        }
+        response = requests.get(url=url, params=params).json()
+        self.accuweather_city_id = response["Key"]
+        self.save()
+
     def geocode_location_by_google_maps(self):
         gmaps = googlemaps.Client(key=settings.GOOGLE_API_KEY)
         geocode_result = gmaps.geocode(self.get_name_with_country_name())
@@ -98,7 +116,6 @@ class Location(TimeStampedModel):
         except Exception as e:
             logging.error(str(e))
 
-
     @classmethod
     def try_resolve_location_by_name(cls, name: str, phonenumber: str):
         from phone_iso3166.country import phone_country
@@ -108,15 +125,18 @@ class Location(TimeStampedModel):
             return location
 
         gmaps = googlemaps.Client(key=settings.GOOGLE_API_KEY)
-        name += ", "+country.name
+        name += ", " + country.name
         geocode_result = gmaps.geocode(name)
         try:
             result = geocode_result[0]
             geometry = result["geometry"]
             location = geometry["location"]
             bounds = geometry["bounds"]
+            address_components = result["address_components"]
+            address = address_components[0]
 
             location_obj = Location()
+            location_obj.name = address["long_name"]
             location_obj.country = country
             location_obj.latitude = location["lat"]
             location_obj.longitude = location["lng"]
@@ -128,17 +148,18 @@ class Location(TimeStampedModel):
             location_obj.googlemaps_place_id = result["place_id"]
 
             location_obj.save()
-            return location
+            return location_obj
         except Exception as e:
             logging.error(str(e))
             return None
 
 
 @receiver(signal=post_save, sender=Location)
-def check_and_update_location_by_google_maps(sender, instance, created, **kwargs):
+def check_and_update_location_by_google_maps_and_accuweather(sender, instance, created, **kwargs):
     if created:
         if instance.googlemaps_place_id is None:
             instance.geocode_location_by_google_maps()
+            instance.set_accuweather_city_id()
     return
 
 
@@ -146,6 +167,8 @@ class LocationWeather(TimeStampedModel):
     class WeatherHandlers(DjangoChoices):
         netatmo = ChoiceItem("NETATMO")
         openweather = ChoiceItem("OPENWEATHER")
+        accuweather = ChoiceItem("AccuWeather")
+
     handler = models.CharField(blank=False, null=False, choices=WeatherHandlers.choices, max_length=30)
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
     summary = models.CharField(max_length=255, null=False, blank=False, default="")
@@ -165,8 +188,11 @@ class LocationWeather(TimeStampedModel):
         verbose_name = "Weather"
         verbose_name_plural = "Weather"
 
-    def valid(self):
+    def is_valid(self):
         raise NotImplementedError("The valid method should be implemented")
+
+    def retrieve(self, chanel):
+        raise NotImplementedError("The retrive method should be implemented")
 
     def __str__(self):
         return "Location {}, Summary {}, Temperature {}, Pressure {}, Humidity {}, Minimum temperature {} Maximum " \
@@ -211,7 +237,7 @@ class CurrentWeather(LocationWeather):
         verbose_name = "Current Weather"
         verbose_name_plural = "Current Weather"
 
-    def valid(self):
+    def is_valid(self):
         return datetime.datetime.now(timezone.utc) - datetime.timedelta(hours=3) <= self.modified
 
     @property
@@ -222,9 +248,36 @@ class CurrentWeather(LocationWeather):
     def detailed(self):
         return "Current weather {}".format(super(CurrentWeather, self).detailed)
 
+    def retrieve(self, chanel):
+        if chanel == LocationWeather.WeatherHandlers.accuweather:
+            self.handler = LocationWeather.WeatherHandlers.accuweather
+            if self.location.accuweather_city_id is None:
+                self.location.set_accuweather_city_id()
+            weather = AccuWeather().get_current_weather(accuweather_city_id=self.location.accuweather_city_id)
+        elif chanel == LocationWeather.WeatherHandlers.openweather:
+            self.handler = LocationWeather.WeatherHandlers.openweather
+            weather = OpenWeather().get_current_weather(latitude=self.location.latitude, longitude=self.location.longitude)
+        elif chanel == LocationWeather.WeatherHandlers.netatmo:
+            self.handler = LocationWeather.WeatherHandlers.netatmo
+            weather = NetAtmo().get_current_weather(latitude=self.location.latitude, longitude=self.location.longitude)
+        else:
+            raise ValueError("Unknown chanel")
+        self.summary = weather["summary"]
+        self.temperature = weather["temperature"]
+        self.pressure = weather["pressure"]
+        self.humidity = weather["humidity"]
+        self.temp_min = weather["temp_min"]
+        self.temp_max = weather["temp_max"]
+        self.visibility = weather["visibility"]
+        self.wind_speed = weather["wind_speed"]
+        self.wind_degree = weather["wind_degree"]
+        self.clouds_all = weather["clouds_all"]
+        # self.rain = weather["rain"]
+        self.save()
+
 
 class ForecastWeather(LocationWeather):
-    period = models.DurationField(null=False, blank=False)
+    days = models.IntegerField(null=False, blank=False)
     forecast_time = models.DateTimeField(null=False, blank=False, default=timezone.now)
 
     class Meta(object):
@@ -233,11 +286,32 @@ class ForecastWeather(LocationWeather):
 
     @property
     def description(self):
-        return "Forecast for {}, {}".format(self.period, super(ForecastWeather, self).description)
+        return "Forecast for {}, {}".format(self.days, super(ForecastWeather, self).description)
 
     @property
     def detailed(self):
-        return "Forecast for {}, {}".format(self.period, super(ForecastWeather, self).detailed)
+        return "Forecast for {}, {}".format(self.days, super(ForecastWeather, self).detailed)
 
-    def valid(self):
-        return datetime.datetime.now() <= (self.forecast_time + self.period)
+    def is_valid(self):
+        return datetime.datetime.now() <= (self.forecast_time + self.days)
+
+    def retrieve(self, chanel=settings.DEFAULT_WEATHER_SOURCE):
+        if chanel == LocationWeather.WeatherHandlers.accuweather:
+            self.handler = LocationWeather.WeatherHandlers.accuweather
+            weather = AccuWeather().get_forecast_weather(location_id=self.id, days=self.days)
+        elif chanel == LocationWeather.WeatherHandlers.openweather:
+            self.handler = LocationWeather.WeatherHandlers.openweather
+            weather = OpenWeather().get_forecast_weather(location_id=self.id, days=self.days)
+        elif chanel == LocationWeather.WeatherHandlers.netatmo:
+            self.handler = LocationWeather.WeatherHandlers.netatmo
+            weather = NetAtmo().get_forecast_weather(location_id=self.id, days=self.days)
+        else:
+            raise ValueError("Unknown chanel")
+        self.summary = weather["summary"]
+        self.temp_min = weather["temp_min"]
+        self.temp_max = weather["temp_max"]
+        self.wind_speed = weather["wind_speed"]
+        self.wind_degree = weather["wind_degree"]
+        self.clouds_all = weather["clouds_all"]
+        self.rain = weather["rain"]
+        self.save()

@@ -16,8 +16,7 @@ from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update
     create_user_forecast_subscription, end_user_subscription, send_user_balance_notification, send_user_account_charges, \
     set_user_location
 from ujumbe.apps.weather.models import CurrentWeather, Location, ForecastWeather
-from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_user_forecast_weather_location, \
-    send_user_subscriptions
+from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_user_forecast_weather_location
 from ujumbe.apps.weather.utils import get_ussd_formatted_weather_forecast_periods, get_location_not_found_response
 
 
