@@ -18,3 +18,4 @@ pytest== 3.9.2
 pycountry==18.5.26
 django-environ==0.4.5
 googlemaps==3.0.2
+gunicorn==19.9.0
