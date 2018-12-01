@@ -109,7 +109,7 @@ def create_celery_beat_tasks():
 
 def run():
     create_countries()
-    create_kenyan_counties()
+    # create_kenyan_counties()
     create_super_user_with_profile(username="admin", password="password", email="jerryshikanga@gmail.com",
                                    first_name="Jerry", last_name="Shikanga", telephone="+254727447101")
     create_celery_beat_tasks()
