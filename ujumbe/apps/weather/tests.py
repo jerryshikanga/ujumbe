@@ -16,5 +16,5 @@ class ModelTests(TestCase):
         weather1 = G(CurrentWeather, created=hours5_ago, modified=hours5_ago)
         hours2_ago = datetime.datetime.now() - datetime.timedelta(hours=2)
         weather2 = G(CurrentWeather, created=hours2_ago, modified=hours2_ago)
-        self.assertFalse(weather1.valid())
-        self.assertTrue(weather2.valid())
+        self.assertFalse(weather1.is_valid())
+        self.assertTrue(weather2.is_valid())

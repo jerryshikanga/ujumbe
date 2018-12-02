@@ -35,6 +35,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "shikanga.com",
     "127.0.0.1",
+    "0.0.0.0"
 ]
 
 # Application definition
@@ -139,5 +140,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
-STATIC_URL = 'http://shikanga.com/static/ujumbe/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(PROJECT_DIR, "static")
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(PROJECT_DIR, "media")

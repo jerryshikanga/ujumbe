@@ -15,10 +15,20 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('africastalking/', include('ujumbe.apps.africastalking.urls')),
-    path('profile/', include('ujumbe.apps.profiles.urls')),
-    path('weather/', include('ujumbe.apps.weather.urls')),
-]
+if settings.URL_IS_SHARED:
+    shared_url_prefix = str(settings.URL_PREFIX)
+    urlpatterns = [
+        path(shared_url_prefix+'admin/', admin.site.urls),
+        path(shared_url_prefix+'africastalking/', include('ujumbe.apps.africastalking.urls')),
+        path(shared_url_prefix+'profile/', include('ujumbe.apps.profiles.urls')),
+        path(shared_url_prefix+'weather/', include('ujumbe.apps.weather.urls')),
+    ]
+else:
+    urlpatterns = [
+        path('admin/', admin.site.urls),
+        path('africastalking/', include('ujumbe.apps.africastalking.urls')),
+        path('profile/', include('ujumbe.apps.profiles.urls')),
+        path('weather/', include('ujumbe.apps.weather.urls')),
+    ]

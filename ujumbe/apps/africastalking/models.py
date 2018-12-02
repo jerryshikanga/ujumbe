@@ -3,7 +3,6 @@ from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from author.decorators import with_author
 from djchoices import DjangoChoices, ChoiceItem
-from ujumbe.apps.profiles.models import AccountCharges
 
 
 # Create your models here.
@@ -43,7 +42,7 @@ class OutgoingMessages(Message):
         buffered = ChoiceItem("Buffered")
         rejected = ChoiceItem("Rejected")
         success = ChoiceItem("Success")
-    charge = models.ForeignKey(AccountCharges, null=True, blank=True, on_delete=models.SET_NULL)
+    charge = models.ForeignKey("profiles.AccountCharges", null=True, blank=True, on_delete=models.SET_NULL)
     delivery_status = models.CharField(null=False, blank=False, max_length=50, choices=MessageDeliveryStatus.choices,
                                        default=MessageDeliveryStatus.submitted)
     failure_reason = models.CharField(null=True, blank=True, max_length=50)
