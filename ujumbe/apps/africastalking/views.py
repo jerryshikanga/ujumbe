@@ -6,7 +6,8 @@ import re
 from django.http.response import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-# from django.views.generic import View
+from django.views.generic import View as DjangoView
+from django.conf import settings
 from rest_framework.views import View
 from djchoices import DjangoChoices, ChoiceItem
 
@@ -389,3 +390,40 @@ class AtUssdcallbackView(View):
         except Exception as e:
             logging.error(e)
             return HttpResponse(status=400)
+
+
+class TelerivetWebhookView(DjangoView):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(TelerivetWebhookView, self).dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('secret') != settings.TELERIVET_WEBHOOK_SECRET :
+            return HttpResponse("Invalid webhook secret", 'text/plain', 403)
+
+        if request.POST.get('event') == 'incoming_message':
+            content = request.POST.get('content')
+            from_number = request.POST.get('from_number')
+            phone_id = request.POST.get('phone_id')
+            id = request.POST.get("id")
+            to_number = request.POST.get("to_number")
+
+            IncomingMessage.objects.create(
+                phonenumber=from_number,
+                shortcode=to_number,
+                text=content,
+                provider_id=id,
+            )
+
+            return HttpResponse(status=200)
+
+        if request.POST.get('event') == 'send_status':
+            id = request.POST.get('id')
+            message = OutgoingMessages.objects.filter(provider_id=id).first()
+            if message is not None:
+                status = request.POST.get('status')
+                error_message = request.POST.get('error_message')
+                message.delivery_status = status
+                message.failure_reason = error_message
+                message.save()
+                return HttpResponse(status=200)

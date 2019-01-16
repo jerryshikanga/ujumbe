@@ -30,6 +30,7 @@ class Message(TimeStampedModel):
 class IncomingMessage(Message):
     link_id = models.CharField(max_length=255, null=True, blank=True)
     shortcode = models.CharField(max_length=10, null=False, blank=False)
+    processed = models.BooleanField(default=False)
 
 
 @with_author

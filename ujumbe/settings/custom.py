@@ -52,3 +52,4 @@ URL_PREFIX = env("/ujumbe/", default="")
 
 TELERIVET_API_KEY = env("TELERIVET_API_KEY", default="")
 TELERIVET_PROJECT_ID = env("TELERIVET_PROJECT_ID", default="")
+TELERIVET_WEBHOOK_SECRET = env("TELERIVET_WEBHOOK_SECRET", default="")
