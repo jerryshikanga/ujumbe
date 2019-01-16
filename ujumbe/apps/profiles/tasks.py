@@ -1,12 +1,17 @@
+import requests
+import africastalking
+import telerivet
+import logging
+from celery import task
+
 from django.contrib.auth import get_user_model
 from django.conf import settings
+
 from ujumbe.apps.weather.models import Location
 from ujumbe.apps.profiles.models import Profile, AccountCharges, Subscription
 from ujumbe.apps.africastalking.models import OutgoingMessages, Message
 from ujumbe.apps.weather.utils import ForecastPeriods
-import africastalking
-import logging
-from celery import task
+
 
 User = get_user_model()
 
@@ -65,6 +70,8 @@ def update_profile_location(phonenumber: str, location_name):
 
 @task
 def send_sms(phonenumber: str, text: str):
+    if settings.TELERIVET_PROJECT_ID and settings.TELERIVET_API_KEY:
+        return send_sms_via_telerivet(phonenumber=phonenumber, text=text)
     try:
         africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
         sms = africastalking.SMS
@@ -100,6 +107,37 @@ def send_sms(phonenumber: str, text: str):
     except Exception as e:
         message = "Failed to send message. Error {}".format(str(e))
         logging.warning(message)
+
+@str
+def send_sms_via_telerivet(phonenumber : str, text : str):
+    tr = telerivet.API(settings.TELERIVET_API_KEY)
+    project = tr.initProjectById(settings.TELERIVET_PROJECT_ID)
+
+    sent_msg = project.sendMessage(
+        content="hello world",
+        to_number="+16505550123"
+    )
+
+    profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
+        telephone=phonenumber).exists() else None
+    charge = AccountCharges.objects.create(
+        profile=profile,
+        cost=1,
+        currency_code="KES",
+    )
+    outgoing_sms = OutgoingMessages.objects.create(
+        phonenumber=phonenumber,
+        text=text,
+        handler=Message.MessageProviders.Africastalking,
+        delivery_status=OutgoingMessages.MessageDeliveryStatus.submitted,
+        provider_id="",
+        charge=charge
+    )
+    charge.description = outgoing_sms.summary
+    charge.save()
+
+    return outgoing_sms
+
 
 @task
 def create_user_forecast_subscription(phonenumber: str, location_id: int, frequency: int):
