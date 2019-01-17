@@ -9,9 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View as DjangoView
 from django.conf import settings
 from rest_framework.views import View
-from djchoices import DjangoChoices, ChoiceItem
 
-from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession, OutgoingMessages, Message
+from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession, OutgoingMessages, Message, MessageKeywords
 from ujumbe.apps.profiles.models import Profile, Subscription
 from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location, \
     create_user_forecast_subscription, end_user_subscription, send_user_balance_notification, send_user_account_charges, \
@@ -22,15 +21,6 @@ from ujumbe.apps.weather.utils import get_ussd_formatted_weather_forecast_period
 
 
 # Create your views here.
-class MessageKeywords(DjangoChoices):
-    Register = ChoiceItem("REGISTER")
-    Weather = ChoiceItem("WEATHER")
-    Subscribe = ChoiceItem("SUBSCRIBE")
-    Unsubscribe = ChoiceItem("UNSUBSCRIBE")
-    Location = ChoiceItem("LOCATION")
-    Forecast = ChoiceItem("FORECAST")
-
-
 class ATIncomingMessageCallbackView(View):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
@@ -404,7 +394,6 @@ class TelerivetWebhookView(DjangoView):
         if request.POST.get('event') == 'incoming_message':
             content = request.POST.get('content')
             from_number = request.POST.get('from_number')
-            phone_id = request.POST.get('phone_id')
             id = request.POST.get("id")
             to_number = request.POST.get("to_number")
 

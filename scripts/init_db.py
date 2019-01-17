@@ -105,6 +105,11 @@ def create_celery_beat_tasks():
         name="Check and send subscriptions",
         task="ujumbe.apps.profiles.tasks.check_and_send_user_subscriptions"
     )
+    PeriodicTask.objects.get_or_create(
+        interval=schedule,
+        name="Check and process messages",
+        task="ujumbe.apps.africastalking.tasks.process_incoming_messages"
+    )
 
 
 def run():
