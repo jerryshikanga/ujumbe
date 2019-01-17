@@ -427,3 +427,6 @@ class TelerivetWebhookView(DjangoView):
                 message.failure_reason = error_message
                 message.save()
                 return HttpResponse(status=200)
+
+        else:
+            return HttpResponse(status=400)

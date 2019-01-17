@@ -108,15 +108,25 @@ def send_sms(phonenumber: str, text: str):
         message = "Failed to send message. Error {}".format(str(e))
         logging.warning(message)
 
-@str
+@task
 def send_sms_via_telerivet(phonenumber : str, text : str):
     tr = telerivet.API(settings.TELERIVET_API_KEY)
     project = tr.initProjectById(settings.TELERIVET_PROJECT_ID)
 
     sent_msg = project.sendMessage(
-        content="hello world",
-        to_number="+16505550123"
+        content=text,
+        to_number=phonenumber
     )
+
+    # Message
+    # JSON: {"id": "SMd9ff936d94df1f72", "phone_id": "PNf3ebae260670e677", "contact_id": "CT7631a03539e0ef2b",
+    #        "direction": "outgoing", "status": "queued", "message_type": "sms", "source": "api",
+    #        "time_created": 1547684822, "time_sent": null, "time_updated": 1547684822, "from_number": "254727447101",
+    #        "to_number": "+254727447101", "content": "Hi there", "starred": false, "simulated": false, "vars": {},
+    #        "external_id": null, "label_ids": [], "route_id": null, "broadcast_id": null, "service_id": null,
+    #        "user_id": "UR32dbb2384cc385b4", "project_id": "PJ9e1257b6e08fba7e"}
+
+    return sent_msg
 
     profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
         telephone=phonenumber).exists() else None
@@ -128,7 +138,7 @@ def send_sms_via_telerivet(phonenumber : str, text : str):
     outgoing_sms = OutgoingMessages.objects.create(
         phonenumber=phonenumber,
         text=text,
-        handler=Message.MessageProviders.Africastalking,
+        handler=Message.MessageProviders.Telerevivet,
         delivery_status=OutgoingMessages.MessageDeliveryStatus.submitted,
         provider_id="",
         charge=charge
