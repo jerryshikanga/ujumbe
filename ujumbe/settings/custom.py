@@ -49,3 +49,7 @@ DEFAULT_WEATHER_SOURCE = env("DEFAULT_WEATHER_SOURCE", default="AccuWeather")
 
 URL_IS_SHARED = env("URL_IS_SHARED", default=False)
 URL_PREFIX = env("/ujumbe/", default="")
+
+TELERIVET_API_KEY = env("TELERIVET_API_KEY", default="")
+TELERIVET_PROJECT_ID = env("TELERIVET_PROJECT_ID", default="")
+TELERIVET_WEBHOOK_SECRET = env("TELERIVET_WEBHOOK_SECRET", default="")
