@@ -71,3 +71,12 @@ class UssdSession(TimeStampedModel):
             self.last_response = response
             self.save()
         return
+
+
+class MessageKeywords(DjangoChoices):
+    Register = ChoiceItem("REGISTER")
+    Weather = ChoiceItem("WEATHER")
+    Subscribe = ChoiceItem("SUBSCRIBE")
+    Unsubscribe = ChoiceItem("UNSUBSCRIBE")
+    Location = ChoiceItem("LOCATION")
+    Forecast = ChoiceItem("FORECAST")
