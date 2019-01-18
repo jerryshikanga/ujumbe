@@ -64,3 +64,5 @@ def process_incoming_messages(self):
                 keywords += key[1] + " "
             response += "Your entry {} is invalid. Try again with either {}. ".format(message.text, keywords)
         send_sms.delay(phonenumber=message.phonenumber, text=response)
+        message.processed = True
+        message.save()
