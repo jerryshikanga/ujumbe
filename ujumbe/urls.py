@@ -27,8 +27,8 @@ if settings.URL_IS_SHARED:
     ]
 else:
     urlpatterns = [
-        path('admin/', admin.site.urls),
-        path('africastalking/', include('ujumbe.apps.africastalking.urls')),
-        path('profile/', include('ujumbe.apps.profiles.urls')),
-        path('weather/', include('ujumbe.apps.weather.urls')),
+        path('ujumbe/admin/', admin.site.urls),
+        path('ujumbe/africastalking/', include('ujumbe.apps.africastalking.urls')),
+        path('ujumbe/profile/', include('ujumbe.apps.profiles.urls')),
+        path('ujumbe/weather/', include('ujumbe.apps.weather.urls')),
     ]
