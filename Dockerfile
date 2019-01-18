@@ -45,6 +45,7 @@ RUN touch /var/www/python/ujumbe/debug.log && chmod 777 /var/www/python/ujumbe/
 RUN cp $PROJECT_DIR/docker/supervisord/gunicorn.conf /etc/supervisor/conf.d/ujumbe_gunicorn.conf
 RUN cp $PROJECT_DIR/docker/supervisord/celery.conf /etc/supervisor/conf.d/ujumbe_celery.conf
 RUN cp $PROJECT_DIR/docker/supervisord/beat.conf /etc/supervisor/conf.d/ujumbe_celerybeat.conf
+RUn cp $PROJETC_DIR/docker/supervisord/group.conf /etc/supervisor/conf.d/group.conf
 RUN supervisorctl reread && supervisorctl update
 # Server
 EXPOSE 8000
