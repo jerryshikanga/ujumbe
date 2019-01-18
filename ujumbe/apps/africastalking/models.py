@@ -10,7 +10,7 @@ class Message(TimeStampedModel):
     class MessageProviders(DjangoChoices):
         Africastalking = ChoiceItem("Africastalking")
         Nexmo = ChoiceItem("Nexmo")
-        Telerevivet = ChoiceItem("Telerivet")
+        Telerivet = ChoiceItem("Telerivet")
 
     phonenumber = models.CharField(max_length=20, null=False, blank=False)
     text = models.TextField(null=False, blank=False)

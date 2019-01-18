@@ -315,6 +315,7 @@ class TelerivetWebhookView(DjangoView):
                 shortcode=to_number,
                 text=content,
                 provider_id=id,
+                handler=Message.MessageProviders.Telerivet
             )
 
             return HttpResponse(status=200)

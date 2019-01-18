@@ -138,7 +138,7 @@ def send_sms_via_telerivet(phonenumber : str, text : str):
     outgoing_sms = OutgoingMessages.objects.create(
         phonenumber=phonenumber,
         text=text,
-        handler=Message.MessageProviders.Telerevivet,
+        handler=Message.MessageProviders.Telerivet,
         delivery_status=OutgoingMessages.MessageDeliveryStatus.submitted,
         provider_id="",
         charge=charge
