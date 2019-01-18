@@ -35,6 +35,8 @@ ARG PROJECT_DIR=/var/www/${PROJECT}
 RUN mkdir -p $PROJECT_DIR
 WORKDIR $PROJECT_DIR
 RUN pip install -r requirements.txt
+# telerivet not yet on pip
+RUN git clone https://github.com/Telerivet/telerivet-python-client.git && python telerivet-python-client/setup.py install && rm -rf telerivet-python-client
 RUN python manage.py makemigrations && python manage.py migrate && python manage.py runscript init_db
 # set up loggin files && dirs
 RUN mkdir /var/log/ujumbe/
