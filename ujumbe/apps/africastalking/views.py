@@ -3,19 +3,19 @@ import json
 import logging
 import re
 
+from django.conf import settings
 from django.http.response import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View as DjangoView
-from django.conf import settings
 from rest_framework.views import View
 
-from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession, OutgoingMessages, Message, MessageKeywords
+from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession, OutgoingMessages, Message
 from ujumbe.apps.profiles.models import Profile, Subscription
-from ujumbe.apps.profiles.tasks import send_sms, create_customer_account, update_profile_location, \
-    create_user_forecast_subscription, end_user_subscription, send_user_balance_notification, send_user_account_charges, \
+from ujumbe.apps.profiles.tasks import create_customer_account, create_user_forecast_subscription, \
+    end_user_subscription, send_user_balance_notification, send_user_account_charges, \
     set_user_location
-from ujumbe.apps.weather.models import CurrentWeather, Location, ForecastWeather
+from ujumbe.apps.weather.models import Location, ForecastWeather
 from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_user_forecast_weather_location
 from ujumbe.apps.weather.utils import get_ussd_formatted_weather_forecast_periods, get_location_not_found_response
 
