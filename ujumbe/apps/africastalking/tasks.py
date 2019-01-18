@@ -7,7 +7,7 @@ from ujumbe.apps.weather.models import CurrentWeather
 
 
 @task
-def process_incoming_messages(self):
+def process_incoming_messages():
     unprocessed_incoming_messages = IncomingMessage.objects.filter(processed=False)
 
     for message in unprocessed_incoming_messages:
