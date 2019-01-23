@@ -3,6 +3,7 @@ import logging
 from celery import task
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from phonenumber_field.validators import validate_international_phonenumber
 
 from ujumbe.apps.africastalking.models import OutgoingMessages
 from ujumbe.apps.profiles.models import Profile, AccountCharges, Subscription
@@ -67,6 +68,7 @@ def update_profile_location(phonenumber: str, location_name):
 
 @task
 def send_sms(phonenumber: str, text: str):
+    validate_international_phonenumber(phonenumber)
     data = Telerivet.send_sms(phonenumber=phonenumber, text=text) \
         if settings.TELERIVET_PROJECT_ID and settings.TELERIVET_API_KEY \
         else Africastalking.send_sms(phonenumber=phonenumber, text=text)

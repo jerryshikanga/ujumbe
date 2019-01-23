@@ -8,6 +8,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django_extensions.db.models import TimeStampedModel
+from phonenumber_field.modelfields import PhoneNumberField
 from djchoices import DjangoChoices, ChoiceItem
 
 from ujumbe.apps.weather.models import Location
@@ -20,7 +21,7 @@ User = get_user_model()
 @with_author
 class Profile(TimeStampedModel):
     user = models.OneToOneField(User, null=True, blank=True, on_delete=models.SET_NULL)
-    telephone = models.CharField(max_length=15, null=False, blank=False, verbose_name="Telephone Number", unique=True)
+    telephone = PhoneNumberField(unique=True, null=False, blank=False)
     location = models.ForeignKey(Location, null=True, blank=True, on_delete=models.SET_NULL)
     balance = models.FloatField(default=0, null=False, blank=False)
 
@@ -61,7 +62,7 @@ class AccountCharges(TimeStampedModel):
 
 @receiver(post_save, sender=AccountCharges)
 def update_balance_on_charge(sender, instance, created, **kwargs):
-    if created:
+    if created and instance.profile is not None:
         instance.profile.balance -= float(instance.cost)
         instance.profile.save()
 
