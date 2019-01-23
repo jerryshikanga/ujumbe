@@ -75,7 +75,7 @@ def send_sms(phonenumber: str, text: str):
         telephone=phonenumber).exists() else None
     charge = AccountCharges.objects.create(
         profile=profile,
-        cost=data["cost"],
+        cost=float(data["cost"]),
         currency_code=data["currency_code"],
     )
     outgoing_sms = OutgoingMessages.objects.create(
