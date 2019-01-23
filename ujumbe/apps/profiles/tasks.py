@@ -1,17 +1,14 @@
-import requests
-import africastalking
-import telerivet
 import logging
+
 from celery import task
-
-from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.contrib.auth import get_user_model
 
-from ujumbe.apps.weather.models import Location
+from ujumbe.apps.africastalking.models import OutgoingMessages
 from ujumbe.apps.profiles.models import Profile, AccountCharges, Subscription
-from ujumbe.apps.africastalking.models import OutgoingMessages, Message
+from ujumbe.apps.weather.models import Location
 from ujumbe.apps.weather.utils import ForecastPeriods
-
+from ujumbe.apps.profiles.handlers import Telerivet, Africastalking
 
 User = get_user_model()
 
@@ -70,82 +67,27 @@ def update_profile_location(phonenumber: str, location_name):
 
 @task
 def send_sms(phonenumber: str, text: str):
-    if settings.TELERIVET_PROJECT_ID and settings.TELERIVET_API_KEY:
-        return send_sms_via_telerivet(phonenumber=phonenumber, text=text)
-    try:
-        africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
-        sms = africastalking.SMS
-        response = sms.send(text, [phonenumber, ], )
-        message_data = response["SMSMessageData"]["Recipients"][0]# only one recipient
-        status_code = message_data["statusCode"]
-        cost_str = message_data["cost"]
-        cost_str_parts = str(cost_str).split(" ")
-        currency_code = cost_str_parts[0]
-        cost = cost_str_parts[1]
-        status = message_data["status"]
-        africastalking_id = message_data["messageId"]
-
-        profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
-            telephone=phonenumber).exists() else None
-        charge = AccountCharges.objects.create(
-            profile=profile,
-            cost=cost,
-            currency_code=currency_code,
-        )
-        outgoing_sms = OutgoingMessages.objects.create(
-            phonenumber=phonenumber,
-            text=text,
-            handler=Message.MessageProviders.Africastalking,
-            delivery_status=status,
-            provider_id=africastalking_id,
-            charge=charge
-        )
-        charge.description = outgoing_sms.summary
-        charge.save()
-
-        return outgoing_sms
-    except Exception as e:
-        message = "Failed to send message. Error {}".format(str(e))
-        logging.warning(message)
-
-@task
-def send_sms_via_telerivet(phonenumber : str, text : str):
-    tr = telerivet.API(settings.TELERIVET_API_KEY)
-    project = tr.initProjectById(settings.TELERIVET_PROJECT_ID)
-
-    sent_msg = project.sendMessage(
-        content=text,
-        to_number=phonenumber
-    )
-
-    # Message
-    # JSON: {"id": "SMd9ff936d94df1f72", "phone_id": "PNf3ebae260670e677", "contact_id": "CT7631a03539e0ef2b",
-    #        "direction": "outgoing", "status": "queued", "message_type": "sms", "source": "api",
-    #        "time_created": 1547684822, "time_sent": null, "time_updated": 1547684822, "from_number": "254727447101",
-    #        "to_number": "+254727447101", "content": "Hi there", "starred": false, "simulated": false, "vars": {},
-    #        "external_id": null, "label_ids": [], "route_id": null, "broadcast_id": null, "service_id": null,
-    #        "user_id": "UR32dbb2384cc385b4", "project_id": "PJ9e1257b6e08fba7e"}
-
-    return sent_msg
+    data = Telerivet.send_sms(phonenumber=phonenumber, text=text) \
+        if settings.TELERIVET_PROJECT_ID and settings.TELERIVET_API_KEY \
+        else Africastalking.send_sms(phonenumber=phonenumber, text=text)
 
     profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
         telephone=phonenumber).exists() else None
     charge = AccountCharges.objects.create(
         profile=profile,
-        cost=1,
-        currency_code="KES",
+        cost=data["cost"],
+        currency_code=data["currency_code"],
     )
     outgoing_sms = OutgoingMessages.objects.create(
         phonenumber=phonenumber,
         text=text,
-        handler=Message.MessageProviders.Telerivet,
-        delivery_status=OutgoingMessages.MessageDeliveryStatus.submitted,
-        provider_id="",
+        handler=data["handler"],
+        delivery_status=data["delivery_status"],
+        provider_id=data["provider_id"],
         charge=charge
     )
     charge.description = outgoing_sms.summary
     charge.save()
-
     return outgoing_sms
 
 
