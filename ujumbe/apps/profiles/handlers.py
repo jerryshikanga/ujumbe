@@ -1,8 +1,9 @@
 import json
 
-import telerivet
 import africastalking
+import requests
 from django.conf import settings
+from requests.auth import HTTPBasicAuth
 
 from ujumbe.apps.africastalking.models import Message
 
@@ -16,22 +17,27 @@ class TelecomHandler(object):
 class Telerivet(TelecomHandler):
     @staticmethod
     def send_sms(phonenumber, text):
-        tr = telerivet.API(settings.TELERIVET_API_KEY)
-        project = tr.initProjectById(settings.TELERIVET_PROJECT_ID)
-
-        telerivet_response = project.sendMessage(
-            content=text,
-            to_number=phonenumber
-        )
-
-        response = telerivet_response if isinstance(telerivet, dict) else json.loads(telerivet_response)
-        return {
-            "handler": Message.MessageProviders.Telerivet,
-            "delivery_status": response["status"],
-            "provider_id": response["id"],
-            "cost": settings.TELERIVET_SMS_SEND_COST,
-            "currency_code": settings.TELERIVET_SMS_SEND_CURRENCY,
+        url = "https://api.telerivet.com/v1/projects/{}/messages/send".format(settings.TELERIVET_PROJECT_ID)
+        data = {
+            "content": text,
+            "to_number": phonenumber
         }
+        headers = {
+            "Content-Type": "application/json"
+        }
+        _response = requests.post(url=url, data=json.dumps(data), headers=headers,
+                                  auth=HTTPBasicAuth(settings.TELERIVET_API_KEY, ''))
+        if _response.ok:
+            response = _response.json()
+            return {
+                "handler": Message.MessageProviders.Telerivet,
+                "delivery_status": response["status"],
+                "provider_id": response["id"],
+                "cost": settings.TELERIVET_SMS_SEND_COST,
+                "currency_code": settings.TELERIVET_SMS_SEND_CURRENCY,
+            }
+        else:
+            _response.raise_for_status()
 
 
 class Africastalking(TelecomHandler):
