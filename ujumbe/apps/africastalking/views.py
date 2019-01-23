@@ -20,6 +20,9 @@ from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_u
 from ujumbe.apps.weather.utils import get_ussd_formatted_weather_forecast_periods, get_location_not_found_response
 
 
+logger = logging.getLogger(__name__)
+
+
 # Create your views here.
 class ATIncomingMessageCallbackView(View):
     @method_decorator(csrf_exempt)
@@ -301,40 +304,44 @@ class TelerivetWebhookView(DjangoView):
         return super(TelerivetWebhookView, self).dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        request_data = json.loads(self.request.body)
-        if request_data.get('secret') != settings.TELERIVET_WEBHOOK_SECRET :
-            print("Request {} Settings {}".format(request_data.get('secret'), settings.TELERIVET_WEBHOOK_SECRET))
-            return HttpResponse("Invalid webhook secret", 'text/plain', 403)
+        try:
+            request_data = json.loads(self.request.body)
+            if request_data.get('secret') != settings.TELERIVET_WEBHOOK_SECRET:
+                print("Request {} Settings {}".format(request_data.get('secret'), settings.TELERIVET_WEBHOOK_SECRET))
+                return HttpResponse("Invalid webhook secret", 'text/plain', 403)
 
-        event = request_data.get('event')
-        if event == 'incoming_message':
-            content = request_data.get('content')
-            from_number = request_data.get('from_number')
-            id = request_data.get("id")
-            to_number = request_data.get("to_number")
+            event = request_data.get('event')
+            if event == 'incoming_message':
+                content = request_data.get('content')
+                from_number = request_data.get('from_number')
+                id = request_data.get("id")
+                to_number = request_data.get("to_number")
 
-            message = IncomingMessage.objects.create(
-                phonenumber=from_number,
-                shortcode=to_number,
-                text=content,
-                provider_id=id,
-                handler=Message.MessageProviders.Telerivet
-            )
+                message = IncomingMessage.objects.create(
+                    phonenumber=from_number,
+                    shortcode=to_number,
+                    text=content,
+                    provider_id=id,
+                    handler=Message.MessageProviders.Telerivet
+                )
 
-            return HttpResponse(status=200, content="MESSAGE {}".format(message.id))
-
-        elif event == 'send_status':
-            id = request_data.get('id')
-            message = OutgoingMessages.objects.filter(provider_id=id).first()
-            if message is not None:
-                status = request_data.get('status')
-                error_message = request_data.get('error_message', None)
-                message.delivery_status = status
-                message.failure_reason = error_message
-                message.save()
                 return HttpResponse(status=200, content="MESSAGE {}".format(message.id))
-            else:
-                return HttpResponse(status=200, content="NO MESSAGE FOUND")
 
-        else:
+            elif event == 'send_status':
+                id = request_data.get('id')
+                message = OutgoingMessages.objects.filter(provider_id=id).first()
+                if message is not None:
+                    status = request_data.get('status')
+                    error_message = request_data.get('error_message', None)
+                    message.delivery_status = status
+                    message.failure_reason = error_message
+                    message.save()
+                    return HttpResponse(status=200, content="MESSAGE {}".format(message.id))
+                else:
+                    return HttpResponse(status=200, content="NO MESSAGE FOUND")
+
+            else:
+                return HttpResponse(status=400)
+        except Exception as e:
+            logger.error("Body: {} Error {} ".format(self.request.body, e))
             return HttpResponse(status=400)

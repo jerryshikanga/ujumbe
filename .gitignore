@@ -2,6 +2,7 @@
 *.xml
 .idea/*
 *.log
+logs/*
 *.env
 
 *.ini

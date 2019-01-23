@@ -1,3 +1,6 @@
+import logging
+import logging.config
+
 from ujumbe.settings.base import *
 from ujumbe.settings import check_if_config_dict_exists
 
@@ -16,23 +19,35 @@ SERVER_EMAIL = 'server@admin.com'
 
 OPEN_WEATHER_APP_ID = env("OPEN_WEATHER_APPID")
 
-LOGGING = {
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(name)s %(levelname)s %(message)s',
+)
+
+LOGGING_CONFIG = None
+logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        },
+    },
     'handlers': {
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, "..", "debug.log"),
+            'filename': os.path.join(PROJECT_DIR, "logs", "debug.log")
         },
     },
     'loggers': {
-        'django': {
-
+        # root logger
+        '': {
+            'level': 'DEBUG',
+            'handlers': ['file',],
         },
     },
-}
-
+})
 
 CUSTOMER_SUPPORT_PHONE = env("CUSTOMER_SUPPORT_EMAIL")
 CUSTOMER_SUPPORT_EMAIL = env("CUSTOMER_SUPPORT_TELEPHONE")
