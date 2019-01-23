@@ -9,13 +9,13 @@ from ujumbe.apps.africastalking.models import Message
 
 class TelecomHandler(object):
     @staticmethod
-    def send_sms(self, phonenumber, text):
+    def send_sms(phonenumber, text):
         raise NotImplementedError
 
 
 class Telerivet(TelecomHandler):
     @staticmethod
-    def send_sms(self, phonenumber, text):
+    def send_sms(phonenumber, text):
         tr = telerivet.API(settings.TELERIVET_API_KEY)
         project = tr.initProjectById(settings.TELERIVET_PROJECT_ID)
 
@@ -36,7 +36,7 @@ class Telerivet(TelecomHandler):
 
 class Africastalking(TelecomHandler):
     @staticmethod
-    def send_sms(self, phonenumber, text):
+    def send_sms(phonenumber, text):
         africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
         sms = africastalking.SMS
         response = sms.send(text, [phonenumber, ], )
