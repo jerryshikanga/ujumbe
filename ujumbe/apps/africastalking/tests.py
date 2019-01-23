@@ -11,6 +11,7 @@ from django_dynamic_fixture import G
 from mock import patch
 from ujumbe.apps.profiles.tasks import send_sms
 from django.utils.crypto import get_random_string
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -70,7 +71,8 @@ class IncomingMessageTests(TestCase):
             "id": at_id,
             "linkId": link_id
         }
-        self.client.post(reverse("africastalking:incoming_message_callback"), data=json.dumps(post_data), content_type="application/json")
+        self.client.post(reverse("africastalking:incoming_message_callback"), data=json.dumps(post_data),
+                         content_type="application/json")
         self.assertTrue(IncomingMessage.objects.filter(provider_id=at_id).exists())
 
 
@@ -101,7 +103,8 @@ class OutgoingMessageTests(TestCase):
             "id": "123456",
             "networkCode": 63902
         }
-        response = self.client.post(reverse("africastalking:outgoing_message_callback"), data=json.dumps(data), content_type="application/json")
+        response = self.client.post(reverse("africastalking:outgoing_message_callback"), data=json.dumps(data),
+                                    content_type="application/json")
         self.assertEqual(response.status_code, 400)
 
 
@@ -178,3 +181,14 @@ class UssdTests(TestCase):
         response = self.client.post(self.at_ussd_callback_url, data=json.dumps(self.post_data),
                                     content_type="application/json")
         self.assertEqual(int(response.status_code), 200)
+
+
+class TelerivetTests(TestCase):
+    def test_sms_callback(self):
+        post_data = {
+            "event": "send_status",
+            "secret": "ALNTFZUQWERWUE7RZGNQH4A6CEK2RDHZ"
+        }
+        url = reverse("africastalking:telerivet_webhook_view")
+        response = self.client.post(url, data=post_data)
+        self.assertEqual(response.status_code, 200)  # should always return 200

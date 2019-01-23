@@ -301,16 +301,19 @@ class TelerivetWebhookView(DjangoView):
         return super(TelerivetWebhookView, self).dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        if request.POST.get('secret') != settings.TELERIVET_WEBHOOK_SECRET :
+        request_data = json.loads(self.request.body)
+        if request_data.get('secret') != settings.TELERIVET_WEBHOOK_SECRET :
+            print("Request {} Settings {}".format(request_data.get('secret'), settings.TELERIVET_WEBHOOK_SECRET))
             return HttpResponse("Invalid webhook secret", 'text/plain', 403)
 
-        if request.POST.get('event') == 'incoming_message':
-            content = request.POST.get('content')
-            from_number = request.POST.get('from_number')
-            id = request.POST.get("id")
-            to_number = request.POST.get("to_number")
+        event = request_data.get('event')
+        if event == 'incoming_message':
+            content = request_data.get('content')
+            from_number = request_data.get('from_number')
+            id = request_data.get("id")
+            to_number = request_data.get("to_number")
 
-            IncomingMessage.objects.create(
+            message = IncomingMessage.objects.create(
                 phonenumber=from_number,
                 shortcode=to_number,
                 text=content,
@@ -318,18 +321,20 @@ class TelerivetWebhookView(DjangoView):
                 handler=Message.MessageProviders.Telerivet
             )
 
-            return HttpResponse(status=200)
+            return HttpResponse(status=200, content="MESSAGE {}".format(message.id))
 
-        if request.POST.get('event') == 'send_status':
-            id = request.POST.get('id')
+        elif event == 'send_status':
+            id = request_data.get('id')
             message = OutgoingMessages.objects.filter(provider_id=id).first()
             if message is not None:
-                status = request.POST.get('status')
-                error_message = request.POST.get('error_message')
+                status = request_data.get('status')
+                error_message = request_data.get('error_message', None)
                 message.delivery_status = status
                 message.failure_reason = error_message
                 message.save()
-                return HttpResponse(status=200)
+                return HttpResponse(status=200, content="MESSAGE {}".format(message.id))
+            else:
+                return HttpResponse(status=200, content="NO MESSAGE FOUND")
 
         else:
             return HttpResponse(status=400)

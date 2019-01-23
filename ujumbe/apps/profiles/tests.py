@@ -1,8 +1,11 @@
 from mock import patch
+import requests_mock
+import requests
 from django.test import TestCase
 from django_dynamic_fixture import G
 
 from ujumbe.apps.profiles.models import Profile, AccountCharges
+from ujumbe.apps.profiles.handlers import Telerivet
 
 
 # Create your tests here.
@@ -14,8 +17,8 @@ class ChargeTests(TestCase):
 
 
 class TelerivetTests(TestCase):
-    @patch("ujumbe.apps.profiles.handlers.telerivet")
-    def test_telerivet_sms(self, mock_telerivet):
+    @patch("ujumbe.apps.profiles.handlers.requests.post")
+    def test_telerivet_sms(self, mock_telerivet_request):
         telerivet_response = """
         {
             "id": "SMd9ff936d94df1f72", "phone_id": "PNf3ebae260670e677", "contact_id": "CT7631a03539e0ef2b",
@@ -26,4 +29,11 @@ class TelerivetTests(TestCase):
             "external_id": null, "label_ids": [], "route_id": null, "broadcast_id": null, "service_id": null,
             "user_id": "UR32dbb2384cc385b4", "project_id": "PJ9e1257b6e08fba7e"}
         """
-        mock_telerivet.project.sendMessage.return_value = telerivet_response
+        adapter = requests_mock.Adapter()
+        session = requests.Session()
+        session.mount('mock', adapter)
+        adapter.register_uri('POST', 'mock://test.com', text=telerivet_response)
+        mock_telerivet_request.return_value = session.post('mock://test.com')
+        data = Telerivet.send_sms("+254727447101", "Test message")
+        self.assertEqual(data["delivery_status"], "queued")
+        self.assertEqual(data["provider_id"], "SMd9ff936d94df1f72")
