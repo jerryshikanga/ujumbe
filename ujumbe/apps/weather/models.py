@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from author.decorators import with_author
 from django_extensions.db.models import TimeStampedModel
 from djchoices import ChoiceItem, DjangoChoices
@@ -238,7 +239,7 @@ class CurrentWeather(LocationWeather):
         verbose_name_plural = "Current Weather"
 
     def is_valid(self):
-        return datetime.datetime.now(timezone.utc) - datetime.timedelta(hours=3) <= self.modified
+        return (datetime.datetime.now() - datetime.timedelta(hours=3)) <= self.modified
 
     @property
     def description(self):

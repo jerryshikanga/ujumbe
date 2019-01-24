@@ -1,4 +1,5 @@
 # Create your models here.
+from phonenumber_field.modelfields import PhoneNumberField
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from author.decorators import with_author
@@ -12,7 +13,7 @@ class Message(TimeStampedModel):
         Nexmo = ChoiceItem("Nexmo")
         Telerivet = ChoiceItem("Telerivet")
 
-    phonenumber = models.CharField(max_length=20, null=False, blank=False)
+    phonenumber = PhoneNumberField(null=False, blank=False)
     text = models.TextField(null=False, blank=False)
     handler = models.CharField(null=False, blank=False, choices=MessageProviders.choices, max_length=100)
     provider_id = models.CharField(max_length=255, null=False, blank=False)
@@ -29,7 +30,7 @@ class Message(TimeStampedModel):
 
 
 class IncomingMessage(Message):
-    link_id = models.CharField(max_length=255, null=True, blank=True)
+    datetime_sent = models.DateTimeField(blank=True, null=True)
     shortcode = models.CharField(max_length=20, null=False, blank=False)
     processed = models.BooleanField(default=False)
 

@@ -4,6 +4,13 @@ import logging.config
 from ujumbe.settings.base import *
 from ujumbe.settings import check_if_config_dict_exists
 
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    )
+}
+
 AFRICASTALKING_USERNAME = env("AFRICASTALKING_USERNAME")
 AFRICASTALKING_API_KEY = env("AFRICASTALKING_API_KEY")
 
@@ -35,7 +42,7 @@ logging.config.dictConfig({
     },
     'handlers': {
         'file': {
-            'level': 'DEBUG',
+            'level': 'ERROR',
             'class': 'logging.FileHandler',
             'filename': os.path.join(PROJECT_DIR, "logs", "debug.log")
         },
@@ -43,8 +50,9 @@ logging.config.dictConfig({
     'loggers': {
         # root logger
         '': {
-            'level': 'DEBUG',
+            'level': 'ERROR',
             'handlers': ['file',],
+            'format': '%(levelname)s %(asctime)s %(module)s: %(message)s'
         },
     },
 })

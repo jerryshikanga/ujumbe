@@ -3,14 +3,15 @@ import json
 import logging
 import re
 
-from django.conf import settings
-from django.http.response import HttpResponse
+from django.http.response import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import View as DjangoView
-from rest_framework.views import View
+from django.forms import model_to_dict
+from rest_framework import status
+from rest_framework.views import View as DRFView
 
 from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession, OutgoingMessages, Message
+from ujumbe.apps.africastalking.serializers import TelerivetSerializer, AfricastalkingIncomingMessageSerializer, AfricastalkingOutgoingMessageSerializer
 from ujumbe.apps.profiles.models import Profile, Subscription
 from ujumbe.apps.profiles.tasks import create_customer_account, create_user_forecast_subscription, \
     end_user_subscription, send_user_balance_notification, send_user_account_charges, \
@@ -19,76 +20,42 @@ from ujumbe.apps.weather.models import Location, ForecastWeather
 from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_user_forecast_weather_location
 from ujumbe.apps.weather.utils import get_ussd_formatted_weather_forecast_periods, get_location_not_found_response
 
-
 logger = logging.getLogger(__name__)
 
 
 # Create your views here.
-class ATIncomingMessageCallbackView(View):
+class ATIncomingMessageCallbackView(DRFView):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
         return super(ATIncomingMessageCallbackView, self).dispatch(*args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        from_telephone = request.data.get("from", None)
-        to_telephone = request.data.get("to", None)
-        text = request.data.get("text", None)
-        date = request.data.get("date", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        africastalking_id = request.data.get("id", None)
-        link_id = request.data.get("linkId", None)
-
-        # save message if not exist
-        if not IncomingMessage.objects.filter(provider_id=africastalking_id).exists():
-            IncomingMessage.objects.create(
-                phonenumber=from_telephone,
-                shortcode=to_telephone,
-                text=text,
-                provider_id=africastalking_id,
-                link_id=link_id,
-            )
+        serializer = AfricastalkingIncomingMessageSerializer(data=request.POST)
+        if serializer.is_valid():
+            message = serializer.save()
+            fields = ["id", "provider_id", "text"]
+            return JsonResponse(model_to_dict(message, fields=fields), status=status.HTTP_201_CREATED)
         else:
-            incoming_message = IncomingMessage.objects.filter(provider_id=africastalking_id).first()
-            if from_telephone is not None:
-                incoming_message.phonenumber = from_telephone
-            if to_telephone is not None:
-                incoming_message.shortcode = to_telephone
-            if text is not None:
-                incoming_message.text = text
-            if link_id is not None:
-                incoming_message.link_id = link_id
-            incoming_message.save()
-        return HttpResponse(status=200, content="", content_type="text/plain")
+            logger.error(str(serializer.errors))
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST, )
 
 
-class AtOutgoingSMSCallback(View):
+class AtOutgoingSMSCallback(DRFView):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
         return super(AtOutgoingSMSCallback, self).dispatch(*args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        try:
-            request_data = json.loads(request.body.decode('utf-8'))
-            phonenumber = request_data.get("phoneNumber", None)
-            status = request_data.get("status", None)
-            africastalking_id = request_data.get("id", None)
-            network_code = request_data.get("networkCode", None)
-
-            if phonenumber is None or status is None or africastalking_id is None or network_code is None:
-                raise ValueError("Please fill fields")
-
-            message = OutgoingMessages.objects.get(provider_id=africastalking_id, handler=Message.MessageProviders.Africastalking)
-            message.delivery_status = status
-            if status == "Failed" or status == "Rejected":
-                message.failure_reason = request_data.get("failureReason", None)
-            message.save()
-            return HttpResponse(status=200)
-
-        except Exception as e:
-            logging.error(e)
-            return HttpResponse(status=400)
+        serializer = AfricastalkingOutgoingMessageSerializer(data=self.request.POST)
+        if serializer.is_valid():
+            message = serializer.save()
+            return JsonResponse(model_to_dict(message, fields=['id', 'delivery_status',]), status=status.HTTP_201_CREATED)
+        else:
+            logger.error(str(serializer.errors))
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST, )
 
 
-class AtUssdcallbackView(View):
+class AtUssdcallbackView(DRFView):
     request_successful_response = "Your response has been recieved and will be processed. You will be notified via " \
                                   "SMS.\n "
     invalid_data_response = "You have entered invalid data. Please try again.\n"
@@ -298,50 +265,17 @@ class AtUssdcallbackView(View):
             return HttpResponse(status=400)
 
 
-class TelerivetWebhookView(DjangoView):
+class TelerivetWebhookView(DRFView):
+
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super(TelerivetWebhookView, self).dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        try:
-            request_data = json.loads(self.request.body)
-            if request_data.get('secret') != settings.TELERIVET_WEBHOOK_SECRET:
-                print("Request {} Settings {}".format(request_data.get('secret'), settings.TELERIVET_WEBHOOK_SECRET))
-                return HttpResponse("Invalid webhook secret", 'text/plain', 403)
-
-            event = request_data.get('event')
-            if event == 'incoming_message':
-                content = request_data.get('content')
-                from_number = request_data.get('from_number')
-                id = request_data.get("id")
-                to_number = request_data.get("to_number")
-
-                message = IncomingMessage.objects.create(
-                    phonenumber=from_number,
-                    shortcode=to_number,
-                    text=content,
-                    provider_id=id,
-                    handler=Message.MessageProviders.Telerivet
-                )
-
-                return HttpResponse(status=200, content="MESSAGE {}".format(message.id))
-
-            elif event == 'send_status':
-                id = request_data.get('id')
-                message = OutgoingMessages.objects.filter(provider_id=id).first()
-                if message is not None:
-                    status = request_data.get('status')
-                    error_message = request_data.get('error_message', None)
-                    message.delivery_status = status
-                    message.failure_reason = error_message
-                    message.save()
-                    return HttpResponse(status=200, content="MESSAGE {}".format(message.id))
-                else:
-                    return HttpResponse(status=200, content="NO MESSAGE FOUND")
-
-            else:
-                return HttpResponse(status=400)
-        except Exception as e:
-            logger.error("Body: {} Error {} ".format(self.request.body, e))
-            return HttpResponse(status=400)
+        serializer = TelerivetSerializer(data=request.POST)
+        if serializer.is_valid():
+            message = serializer.save()
+            return JsonResponse(model_to_dict(message, fields=['id', 'delivery_status',]), status=status.HTTP_201_CREATED)
+        else:
+            logger.error(str(serializer.errors))
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST, )
