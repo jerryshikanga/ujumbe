@@ -12,9 +12,7 @@ RUN apt-get install -y \
     libxml2-dev \
     net-tools \
     python-dev \
-    python3.5-dev \
     python3-venv \
-    python-setools \
     pkg-config \
     supervisor \
     virtualenv \
@@ -29,7 +27,7 @@ RUN echo "127.0.0.1 $(hostname -s)" | tee -a /etc/hosts
 RUN apt-get update && apt-get -y install erlang-nox && apt-get --fix-broken install
 #&& systemctl start rabbitmq-server
 # Project Files and Settings
-    ARG PROJECT=ujumbe
+ARG PROJECT=ujumbe
 ARG PROJECT_DIR=/var/www/python/${PROJECT}/
 ARG VIRTUAL_ENV_DIR=/var/www/python/venv/${PROJECT}/
 # Create the virtual environment

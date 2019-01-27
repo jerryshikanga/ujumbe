@@ -4,6 +4,9 @@ import logging.config
 from ujumbe.settings.base import *
 from ujumbe.settings import check_if_config_dict_exists
 
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default='amqp://oakfxmcf:KEc0LZ9y72l000YqU8P-CcZ7gBob4IXC@cat.rmq'
+                                                     '.cloudamqp.com/oakfxmcf')
+
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',

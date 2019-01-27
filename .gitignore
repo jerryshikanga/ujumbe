@@ -4,6 +4,7 @@
 *.log
 logs/*
 *.env
+.DS_Store
 
 *.ini
 ujumbe/settings/config.ini
