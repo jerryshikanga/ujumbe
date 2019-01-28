@@ -8,7 +8,7 @@ from ujumbe.apps.weather.models import CurrentWeather
 
 @task
 def process_incoming_messages():
-    unprocessed_incoming_messages = IncomingMessage.objects.select_for_update().filter(processed=False)  # added
+    unprocessed_incoming_messages = IncomingMessage.objects.filter(processed=False)  # added
     # select for update to for atomic processing to prevent double processing of ,essages
 
     for message in unprocessed_incoming_messages:
