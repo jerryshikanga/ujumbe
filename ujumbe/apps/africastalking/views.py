@@ -275,7 +275,7 @@ class TelerivetWebhookView(DRFView):
         serializer = TelerivetSerializer(data=request.POST)
         if serializer.is_valid():
             message = serializer.save()
-            return JsonResponse(model_to_dict(message, fields=['id', 'delivery_status',]), status=status.HTTP_201_CREATED)
+            return JsonResponse(model_to_dict(message, fields=['id', 'delivery_status',]), status=status.HTTP_200_OK)
         else:
             logger.error(str(serializer.errors))
             return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST, )
