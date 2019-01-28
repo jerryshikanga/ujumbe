@@ -19,7 +19,8 @@ def process_incoming_messages():
                 pass
             else:
                 parts = message.text.split("*")
-                keyword = parts[0]
+                keyword = str(parts[0]).lower()
+                MessageKeywords.choices = [str(m).lower() for m in MessageKeywords.choices]
                 if keyword not in MessageKeywords.choices:
                     # notify use that his choice is wrong
                     keywords = ""
