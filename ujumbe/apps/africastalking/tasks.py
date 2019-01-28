@@ -20,8 +20,9 @@ def process_incoming_messages():
             else:
                 parts = message.text.split("*")
                 keyword = str(parts[0]).lower()
-                MessageKeywords.choices = [str(m).lower() for m in MessageKeywords.choices]
-                if keyword not in MessageKeywords.choices:
+                choices = [str(MessageKeywords.choices[index][0]).lower() for index, value in
+                           enumerate(MessageKeywords.choices)]
+                if keyword not in choices:
                     # notify use that his choice is wrong
                     keywords = ""
                     for key in MessageKeywords.choices:
