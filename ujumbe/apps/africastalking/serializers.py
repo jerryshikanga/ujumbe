@@ -70,10 +70,12 @@ class AfricastalkingIncomingMessageSerializer(serializers.Serializer):
 
     def save(self, **kwargs):
         data = self.validated_data
+        shortcode = str(data.pop("to"))
+        shortcode = shortcode if shortcode.startswith("+") else "+{}".format(shortcode)
         logger.error("Data {}".format(data))
         data.pop("linkId")
         data["phonenumber"] = data.pop("from")
-        data["shortcode"] = data.pop("to")
+        data["shortcode"] = shortcode
         data["handler"] = Message.MessageProviders.Africastalking
         return IncomingMessage.objects.create(**data)
 
