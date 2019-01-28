@@ -84,6 +84,6 @@ def process_incoming_messages():
                             response = "This feature is coming soon! Stay put. "
                         else:
                             response = "Your entry {} is invalid.".format(message.text)
-                send_sms.delay(phonenumber=message.phonenumber, text=response)
+                send_sms.delay(phonenumber=str(message.phonenumber), text=response)
             message.processed = True
             message.save()

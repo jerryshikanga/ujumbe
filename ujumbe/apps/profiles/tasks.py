@@ -43,7 +43,7 @@ def create_customer_account(first_name: str, last_name: str, phonenumber: str, p
     )
     response = "Hello {}, your account has been created successfully. Your username is {}".format(profile.full_name,
                                                                                                   profile.user.username)
-    send_sms.delay(phonenumber=profile.telephone, text=response)
+    send_sms.delay(phonenumber=str(profile.telephone), text=response)
     return True
 
 
@@ -59,7 +59,7 @@ def update_profile_location(phonenumber: str, location_name):
         else:
             response = "location {} could not be determined. Kindly try again with your county name.".format(
                 profile.location.name)
-        send_sms.delay(phonenumber=profile.telephone, text=response)
+        send_sms.delay(phonenumber=str(profile.telephone), text=response)
         return location_exists
     else:
         logging.warning("Profile with phone {} not found. Can't update location.".format(phonenumber))
@@ -151,7 +151,7 @@ def check_and_send_user_subscriptions():
     subscriptions = Subscription.objects.due()
     for subscription in subscriptions:
         try:
-            send_sms.delay(text=subscription.sms_description, phonenumber=subscription.profile.telephone)
+            send_sms.delay(text=subscription.sms_description, phonenumber=str(subscription.profile.telephone))
         except Exception as e:
             logging.error("Error sending subscription"+str(e))
     logging.info("Sent {} subscriptions".format(len(subscriptions)))
