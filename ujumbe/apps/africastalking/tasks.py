@@ -11,49 +11,49 @@ from ujumbe.apps.weather.models import CurrentWeather
 def process_incoming_messages():
     with transaction.atomic():
         unprocessed_incoming_messages = IncomingMessage.objects.select_for_update().filter(processed=False)  # added
-        # select for update to for atomic processing to prevent double processing of ,essages
-
+        # select for update to for atomic processing to prevent double processing of ,messages
+        responses = []
         for message in unprocessed_incoming_messages:
             # number sending to itself so skip
             if message.shortcode == message.phonenumber:
                 pass
             else:
-                parts = message.text.split("*")
-                keyword = str(parts[0]).lower()
-                choices = [str(MessageKeywords.choices[index][0]).lower() for index, value in
+                parts = message.text.split("*") if "*" in message.text else message.text.split(" ")
+                keyword = str(parts[0]).lower().strip()
+                choices = [str(MessageKeywords.choices[index][0]).lower().strip() for index, value in
                            enumerate(MessageKeywords.choices)]
                 if keyword not in choices:
                     # notify use that his choice is wrong
                     keywords = ""
                     for key in MessageKeywords.choices:
                         keywords += key[1] + " "
-                    response = "Your entry {} is invalid. Try again with either {}. ".format(message.text, keywords)
+                    response = "Your keyword {} is invalid. Try again with either {}. ".format(keyword, keywords)
                 else:
                     if not Profile.objects.filter(telephone=message.phonenumber).exists():
-                        if keyword == MessageKeywords.Register:
+                        if keyword == str(MessageKeywords.Register).lower().strip():
                             first_name = parts[1]
                             last_name = parts[2]
                             create_customer_account.delay(first_name=first_name, last_name=last_name,
-                                                          phonenumber=message.phonenumber)
+                                                          phonenumber=str(message.phonenumber))
                             response = "Your account will be created shortly. You will be notified via sms."
                         else:
                             # no account, no operation allowed
                             response = "Please create an account by sending REGISTER {first_name} {last_name}."
                     else:
                         profile = Profile.objects.get(telephone=message.phonenumber)
-                        if keyword == MessageKeywords.Register:
-                            response = "You are already registered. "
-                        elif keyword == MessageKeywords.Weather:
+                        if keyword == str(MessageKeywords.Register).lower().strip():
+                            response = "You are already registered."
+                        elif keyword == str(MessageKeywords.Weather).lower().strip():
                             summary = False if parts[1].upper() == "DETAILED" else True
                             weather = CurrentWeather.objects.filter(
                                 location=profile.location
                             ).order_by("-created").first()
                             response = weather.summary if summary else weather.detailed
-                        elif keyword == MessageKeywords.Location:
+                        elif keyword == str(MessageKeywords.Location).lower().strip():
                             location_str = parts[1]
                             update_profile_location.delay(phonenumber=message.phonenumber, location_str=location_str)
                             response = "Your request has been received successfully. "
-                        elif keyword == MessageKeywords.Subscribe:
+                        elif keyword == str(MessageKeywords.Subscribe).lower().strip():
                             subscription_type = parts[1]
                             frequency = parts[2]
                             location = parts[3] if parts[3] is not None else profile.location
@@ -67,7 +67,7 @@ def process_incoming_messages():
                                 response = subscription.sms_description
                             else:
                                 response = "You already have a similar subscription. "
-                        elif keyword == MessageKeywords.Unsubscribe:
+                        elif keyword == str(MessageKeywords.Unsubscribe).lower().strip():
                             subscriptions = Subscription.objects.filter(
                                 profile=profile
                             )
@@ -82,10 +82,12 @@ def process_incoming_messages():
 
                             [subscription.deactivate() for subscription in subscriptions]
                             response = "You have deactivated {} subscriptions. ".format(subscriptions.count())
-                        elif keyword == MessageKeywords.Forecast:
+                        elif keyword == str(MessageKeywords.Forecast).lower().strip():
                             response = "This feature is coming soon! Stay put. "
                         else:
                             response = "Your entry {} is invalid.".format(message.text)
                 send_sms.delay(phonenumber=str(message.phonenumber), text=response)
+                responses.append(response)
             message.processed = True
             message.save()
+        return responses
