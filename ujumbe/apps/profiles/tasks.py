@@ -41,8 +41,8 @@ def create_customer_account(first_name: str, last_name: str, phonenumber: str, p
         user=user,
         telephone=phonenumber
     )
-    response = "Hello {}, your account has been created successfully. Your username is {}".format(profile.full_name,
-                                                                                                  profile.user.username)
+    response = "Hello {}, your account has been created successfully. Your username is {}".format(
+        profile.user.get_full_name(), profile.user.username)
     send_sms.delay(phonenumber=str(profile.telephone), text=response)
     return True
 

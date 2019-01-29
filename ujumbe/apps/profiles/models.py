@@ -25,18 +25,9 @@ class Profile(TimeStampedModel):
     location = models.ForeignKey(Location, null=True, blank=True, on_delete=models.SET_NULL)
     balance = models.FloatField(default=0, null=False, blank=False)
 
-    @property
-    def full_name(self):
-        if self.user is not None:
-            if str(self.user.get_full_name()).replace(" ", "") != "":
-                return self.user.get_full_name()
-            else:
-                return self.user.username
-        else:
-            return ""
-
     def __str__(self):
-        return "Name : {} Phone : {}.".format(self.full_name, self.telephone)
+        return "Name : {} Phone : {}.".format(self.full_name if self.user.get_full_name() is not None
+                                              else self.user.username, self.telephone)
 
     class Meta:
         unique_together = ("user", "telephone")
@@ -53,7 +44,7 @@ class AccountCharges(TimeStampedModel):
     description = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return "Charge of {} to {} for {}.".format(self.cost, self.profile.full_name, self.description)
+        return "Charge of {} to {} for {}.".format(self.cost, self.profile, self.description)
 
     class Meta:
         verbose_name_plural = "Charges"
@@ -105,7 +96,7 @@ class Subscription(TimeStampedModel):
 
     @property
     def sms_description(self):
-        return "Subscription to {} frequency {}".format(self.profile.full_name, self.frequency)
+        return "Subscription to {} frequency {}".format(self.profile, self.frequency)
 
     def deactivate(self):
         self.active = False

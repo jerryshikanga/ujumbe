@@ -39,23 +39,29 @@ logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'console': {
-            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
         },
     },
     'handlers': {
         'file': {
-            'level': 'ERROR',
+            'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(PROJECT_DIR, "logs", "debug.log")
+            'filename': os.path.join(PROJECT_DIR, "logs", "debug.log"),
+            'formatter': 'verbose'
         },
     },
     'loggers': {
         # root logger
         '': {
-            'level': 'ERROR',
-            'handlers': ['file',],
-            'format': '%(levelname)s %(asctime)s %(module)s: %(message)s'
+            'level': 'WARNING',
+            'handlers': ['file', ],
+            'formatter': 'verbose'
         },
     },
 })
