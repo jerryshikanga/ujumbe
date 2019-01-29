@@ -62,6 +62,7 @@ def process_incoming_messages():
                             subscription_type = parts[1]
                             frequency = parts[2]
                             location = parts[3] if parts[3] is not None else profile.location
+                            # TODO : Case where location not provided and also not set in profile
                             subscription, created = Subscription.objects.get_or_create(
                                 profile=profile,
                                 subscription_type=subscription_type,

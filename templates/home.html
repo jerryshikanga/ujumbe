@@ -1,0 +1,138 @@
+<html>
+<head>
+    <title>Ujumbe Data</title>
+    <meta name="author" content="Jerry Shikanga">
+    <meta name="description" content="Data provision to small scale farmers">
+    <meta name="keywords" content="smale scale farmers, data, decision, sms, ussd">
+</head>
+<body>
+<h2>Ujumbe</h2>
+<h4>Empowering small scale farmers through data!</h4>
+<a href="/admin/">Admin Page</a>
+<div id="intro">
+    <p>
+        Change in climatic conditions has disrupted the traditional farmer practises.
+        Weather patterns are no longer predsictable, the market is eruptive.
+        This has caused many losses among farmers.
+        Ujumbe was created to cushion farmers against such.
+        It is a platform aimed at providing farmers all the data they need to enable them make better decisions.
+        This data is provided in ways that the farmers can easily access notably, sms and ussd.
+        The platform intention is to keep the costs as low as possible for the farmers, therefore soes not charge anything for usage of the platform.
+        The only costs incurred are the normal network costs incurred when sending or receiving messages.
+        (n/b) remember that when someone is roaming he or she is charged to receive messages.
+    </p>
+</div>
+
+<div id="">
+    <p>
+        The process flow has been developed to be as simple as possible.
+        The user registers to the platform.
+        After registration, the user has the option of choosing whether he or she wants tom subscribe to updates or not.
+        He or she chooses the frequency of these updates.
+        At any one time, a registered user can choose to receive one time data about the current conditions.
+        The user can also choose to opt out of the periodic updates.
+    </p>
+</div>
+
+<div id="">
+    <p>
+        The app is currently served via sms.
+        USSD functionality is present however we haven't been able to raie funds to procure a USSD shortcode.
+        For now, the number +254727447101 is the one serving requests.
+        However, you are requested to use it sparingly so as to help conserve our computing power.
+    </p>
+</div>
+
+<div id="">
+    <p>
+        The following is a guide to using the sms platform.
+        For the sms platform, we allow both space( ) and star(*) as tokenizers.
+        However, we recommend using star as it is easier for the system to decipher.
+        Take for a example a case when you want to get current weather for location athi river.
+        Using spaces you will send WEATHER ATHI RIVER.
+        Using stars you send WEATHER*ATHI RIVER.
+        The second is far much easier to interpret than the first.
+    </p>
+</div>
+
+<div id="registration">
+    <p>
+        To register to the platform, send the text REGISTER*{first_name}*{last_name} to the contact above.
+        If you do not have an account, one will be create for you and a username assigned to you.
+        If you have one then you will be informed accordingly.
+    </p>
+</div>
+
+<div id="currentweather">
+    <p>
+        To get the current weather, send WEATHER*{location_name} to the phonenumber above.
+        However, we also allow leaving the weather field blank.
+        In such a case, the default weather you set when registering/updating your profile will be used.
+        The request will be processed then a response sent via SMS.
+    </p>
+</div>
+
+<div id="forecastweather">
+    <p>
+        To get forecast weather, send the word FORECAST*{subscription_type}*{frequency}*{location}
+        Just like previously, location field can be left blank.
+        The default location set in your profile will be used.
+        If no default location is set, an error will be thrown
+        However, forecast functionality is still in testing.
+        We will keep you updated once it goes live.
+    </p>
+</div>
+
+<div id="subscribe">
+    <p>
+        To get notifications of current or forecast weather for s certain location, you need to subscribe.
+        To subscribe send SUBSCRIBE*{type}*{frequency}*{location}
+        Type is weather current or forecast.
+        Frequency is hour/day/week.
+        Just like previously, location field can be left blank.
+        The default location set in your profile will be used.
+        If no default location is set, an error will be thrown.
+
+    </p>
+</div>
+
+<div id="unsubscribe">
+    <p>
+        To unsubscribe, send the UNSUBSCRIBE*{subscription_number} to the phone number provided above.
+    </p>
+</div>
+
+<div id="subsriptions">
+    <p>
+        To view your subscriptions send SUBSCRIPTIONS to the phone number provided.
+    </p>
+</div>
+
+<div id="location">
+    <p>
+        To set your profile default location send LOCATION*{location_name} to the phone number.
+location_name is the name of the location you want to obtain.
+A search will be done via GPS to determine the co-ordinates of the place for accuracy.
+    </p>
+</div>
+
+<div id="updates">
+    <p>
+        Functionality for market and pest data is in the works.
+        Your patience is appreciated.
+    </p>
+</div>
+
+<div id="contact">
+    <p>
+        For any comments, queries and suggestions you are welcome to reach the team via any of the following channels:
+    <ul>
+        <li>Email : ujumbe@shikanga.com</li>
+        <li>Telephone : +254727447101</li>
+        <li>Website : http://ujumbe.shikanga.com</li>
+    </ul>
+    </p>
+</div>
+
+</body>
+</html>
