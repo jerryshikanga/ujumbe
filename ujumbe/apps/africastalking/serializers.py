@@ -34,9 +34,11 @@ class TelerivetSerializer(serializers.Serializer):
     def save(self, **kwargs):
         event = self.validated_data["event"]
         if event == "incoming_message":
+            shortcode = self.initial_data["to_number"]
+            shortcode = shortcode if shortcode.startswith("+") else "+{}".format(shortcode)
             message = IncomingMessage.objects.create(
                 phonenumber=self.initial_data["from_number"],
-                shortcode=self.initial_data["to_number"],
+                shortcode=shortcode,
                 text=self.initial_data["content"],
                 provider_id=self.initial_data["id"],
                 handler=Message.MessageProviders.Telerivet

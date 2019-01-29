@@ -1,3 +1,5 @@
+import logging
+
 from celery import task
 from django.db import transaction
 
@@ -5,6 +7,8 @@ from ujumbe.apps.africastalking.models import IncomingMessage, MessageKeywords
 from ujumbe.apps.profiles.models import Profile, Subscription
 from ujumbe.apps.profiles.tasks import update_profile_location, send_sms, create_customer_account
 from ujumbe.apps.weather.models import CurrentWeather
+
+logger = logging.getLogger(__name__)
 
 
 @task
@@ -15,8 +19,9 @@ def process_incoming_messages():
         responses = []
         for message in unprocessed_incoming_messages:
             # number sending to itself so skip
-            if message.shortcode == message.phonenumber:
-                pass
+            shortcode = str(message.shortcode) if str(message.shortcode).startswith("+") else "+{}".format(message.shortcode)
+            if shortcode == message.phonenumber:
+                logger.error("Shortcode match phonenumber {} for message {}.".format(message.shortcode, message))
             else:
                 parts = message.text.split("*") if "*" in message.text else message.text.split(" ")
                 keyword = str(parts[0]).lower().strip()
