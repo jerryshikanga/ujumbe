@@ -244,8 +244,11 @@ class CurrentWeather(LocationWeather):
         try:
             return (datetime.datetime.utcnow() - datetime.timedelta(hours=1)) <= self.modified
         except Exception as e:
-            logger.error(str(e))
-            return False
+            try:
+                return (datetime.datetime.now() - datetime.timedelta(hours=1)) <= self.modified
+            except Exception as e:
+                logger.error(str(e))
+                return False
 
     @property
     def description(self):

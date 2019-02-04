@@ -9,7 +9,6 @@ class ModelTests(TestCase):
     def test_instance_property_methods(self):
         location = G(Location)
         weather = G(CurrentWeather, location=location, )
-        print("Description is " + weather.description)
 
     def test_current_weather_validity(self):
         hours5_ago = datetime.datetime.now()-datetime.timedelta(hours=5)

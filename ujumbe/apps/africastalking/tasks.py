@@ -10,16 +10,7 @@ logger = logging.getLogger(__name__)
 
 @task
 def process_incoming_messages():
-    responses = []
-    for message in IncomingMessage.objects.filter(processed=False):
-        try:
-            response = message.process()
-            if response is not None:
-                responses.append({
-                    "phonenumber": message.phonenumber,
-                    "text": response
-                })
-        except Exception as e:
-            logger.error(str(e))
+    responses = IncomingMessage.process_pending_messages()
     if len(responses) > 0:
         send_bulk_sms.delay(responses)
+    return responses
