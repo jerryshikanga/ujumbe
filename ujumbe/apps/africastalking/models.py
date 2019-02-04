@@ -84,7 +84,7 @@ class IncomingMessage(Message):
                                 response = "You are already registered."
                             elif keyword == str(MessageKeywords.Weather).lower().strip():
                                 detailed = True if len(parts) > 1 and parts[1].upper() == "DETAILED" else False
-                                if len(parts) >= 2:
+                                if len(parts) > 2:
                                     # location name provided, use that
                                     location = Location.try_resolve_location_by_name(name=parts[2],
                                                                                      phonenumber=str(
