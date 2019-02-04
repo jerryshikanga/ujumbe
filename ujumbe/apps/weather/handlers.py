@@ -36,52 +36,7 @@ class OpenWeather(BaseHandler):
         try:
             if response.ok:
                 response_json = response.json()
-                logger.warning("OpenWeather response {}".format(str(response_json)))
-                print("OpenWeather response {}".format(str(response_json)))
                 weather = dict()
-                d = {
-                    'coord': {
-                        'lon': 37.01,
-                        'lat': -1.1
-                    },
-                    'weather':
-                        [
-                            {
-                                'id': 800,
-                                'main': 'Clear',
-                                'description': 'clear sky',
-                                'icon': '01n'
-                            }
-                        ],
-                    'base': 'stations',
-                    'main': {
-                        'temp': 20,
-                        'pressure': 1021,
-                        'humidity': 68,
-                        'temp_min': 20,
-                        'temp_max': 20
-                    },
-                    'visibility': 10000,
-                    'wind': {
-                        'speed': 4.1,
-                        'deg': 50
-                    },
-                    'clouds': {
-                            'all': 0
-                    },
-                    'dt': 1549317600,
-                    'sys': {
-                        'type': 1,
-                        'id': 2543,
-                        'message': 0.0038,
-                        'country': 'KE',
-                        'sunrise': 1549251670,
-                        'sunset': 1549295440
-                    },
-                    'id': 179330,
-                    'name': 'Thika',
-                    'cod': 200
-                }
                 weather["summary"] = response_json["weather"][0]["description"]
                 weather["temperature"] = response_json["main"]["temp"]
                 weather["pressure"] = response_json["main"]["pressure"]
