@@ -26,7 +26,7 @@ class Profile(TimeStampedModel):
     balance = models.FloatField(default=0, null=False, blank=False)
 
     def __str__(self):
-        return "Name : {} Phone : {}.".format(self.full_name if self.user.get_full_name() is not None
+        return "Name : {} Phone : {}.".format(self.user.get_full_name() if self.user.get_full_name() is not None
                                               else self.user.username, self.telephone)
 
     class Meta:
