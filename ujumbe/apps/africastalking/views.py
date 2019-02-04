@@ -1,21 +1,21 @@
-import datetime
+import json
 import json
 import logging
 import re
 
+from django.forms import model_to_dict
 from django.http.response import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.forms import model_to_dict
 from rest_framework import status
 from rest_framework.views import View as DRFView
 
-from ujumbe.apps.africastalking.models import IncomingMessage, UssdSession, OutgoingMessages, Message
-from ujumbe.apps.africastalking.serializers import TelerivetSerializer, AfricastalkingIncomingMessageSerializer, AfricastalkingOutgoingMessageSerializer
+from ujumbe.apps.africastalking.models import UssdSession
+from ujumbe.apps.africastalking.serializers import TelerivetSerializer, AfricastalkingIncomingMessageSerializer, \
+    AfricastalkingOutgoingMessageSerializer
 from ujumbe.apps.profiles.models import Profile, Subscription
-from ujumbe.apps.profiles.tasks import create_customer_account, create_user_forecast_subscription, \
-    end_user_subscription, send_user_balance_notification, send_user_account_charges, \
-    set_user_location
+from ujumbe.apps.profiles.tasks import create_user_forecast_subscription, set_user_location, \
+    end_user_subscription, send_user_balance_notification, send_user_account_charges
 from ujumbe.apps.weather.models import Location, ForecastWeather
 from ujumbe.apps.weather.tasks import send_user_current_location_weather, send_user_forecast_weather_location
 from ujumbe.apps.weather.utils import get_ussd_formatted_weather_forecast_periods, get_location_not_found_response
@@ -116,8 +116,10 @@ class AtUssdcallbackView(DRFView):
                     response_text = "END " + self.request_successful_response if self.is_valid_str_response(
                         last_name) else "END " + self.invalid_data_response
                     if not Profile.objects.filter(telephone=phonenumber).exists():
-                        create_customer_account.delay(first_name=first_name, last_name=last_name,
-                                                      phonenumber=phonenumber)
+                        Profile.create_customer_account(
+                            first_name=first_name, last_name=last_name,
+                            phonenumber=phonenumber
+                        )
                     else:
                         response_text = "END You already have an account."
             else:

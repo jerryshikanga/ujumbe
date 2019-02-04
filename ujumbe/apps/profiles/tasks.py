@@ -16,35 +16,6 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def create_customer_account(first_name: str, last_name: str, phonenumber: str, password: str = None, email: str = None):
-    logger.error("Create customer account callled.")
-    if Profile.objects.filter(telephone=phonenumber).exists():
-        message = "Cant create profile with phone number {}. It already exists".format(phonenumber)
-    else:
-        username = email if email is not None else str(first_name + last_name).strip().replace(" ", "").lower()
-        if User.objects.filter(username=username).exists():
-            import random, datetime
-            random.seed(datetime.datetime.now())
-            username = str(random.randint(1, 99)) + username
-        user = User.objects.create(
-            first_name=first_name,
-            last_name=last_name,
-            username=username
-        )
-        if email is not None:
-            user.email = email
-        password = password if password is not None else phonenumber
-        user.set_password(password)
-        user.save()
-        profile = Profile.objects.create(
-            user=user,
-            telephone=phonenumber
-        )
-        message = "Hello {}, your account has been created successfully. Your username is {}".format(
-            profile.user.get_full_name(), profile.user.username)
-    return message
-
-
 @task
 def send_sms(phonenumber: str, text: str):
     validate_international_phonenumber(phonenumber)

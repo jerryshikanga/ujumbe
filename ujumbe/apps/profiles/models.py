@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from author.decorators import with_author
 from django.contrib.auth import get_user_model
@@ -15,6 +16,7 @@ from ujumbe.apps.weather.models import Location
 
 # Create your models here.
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # Create your models here.
@@ -33,6 +35,35 @@ class Profile(TimeStampedModel):
         unique_together = ("user", "telephone")
         verbose_name = "Profile"
         verbose_name_plural = "Profiles"
+
+    @classmethod
+    def create_customer_account(cls, first_name: str, last_name: str, phonenumber: str, password: str = None,
+                                email: str = None):
+        if Profile.objects.filter(telephone=phonenumber).exists():
+            message = "Cant create profile with phone number {}. It already exists".format(phonenumber)
+        else:
+            username = email if email is not None else str(first_name + last_name).strip().replace(" ", "").lower()
+            if User.objects.filter(username=username).exists():
+                import random, datetime
+                random.seed(datetime.datetime.now())
+                username = str(random.randint(1, 99)) + username
+            user = User.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                username=username
+            )
+            if email is not None:
+                user.email = email
+            password = password if password is not None else phonenumber
+            user.set_password(password)
+            user.save()
+            profile = Profile.objects.create(
+                user=user,
+                telephone=phonenumber
+            )
+            message = "Hello {}, your account has been created successfully. Your username is {}".format(
+                profile.user.get_full_name(), profile.user.username)
+        return message
 
 
 @with_author
