@@ -241,7 +241,11 @@ class CurrentWeather(LocationWeather):
         verbose_name_plural = "Current Weather"
 
     def is_valid(self):
-        return (datetime.datetime.now() - datetime.timedelta(hours=1)) <= self.modified
+        try:
+            return (datetime.datetime.utcnow() - datetime.timedelta(hours=1)) <= self.modified
+        except Exception as e:
+            logger.error(str(e))
+            return False
 
     @property
     def description(self):

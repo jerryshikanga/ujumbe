@@ -65,6 +65,10 @@ def process_incoming_messages():
                                 else:
                                     response = CurrentWeather.get_current_location_weather_text(
                                         location_id=location.id, detailed=detailed)
+                                if location is not None and profile.location is None:
+                                    profile.location = location
+                                    profile.save()
+                                    response += "Your default location has been set to {}".format(location.name)
                         elif keyword == str(MessageKeywords.Location).lower().strip():
                             location_str = parts[1]
                             try:

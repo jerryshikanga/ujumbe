@@ -80,17 +80,24 @@ class MessageProcessingTests(APITestCase):
         responses = process_incoming_messages()
         self.assertEqual(str(responses[0]), "You are already registered.")
 
-    @patch("ujumbe.apps.africastalking.tasks.send_sms")
-    def test_weather(self, mock_send_sms):
-        mock_send_sms.return_value.return_value = None
-        phone = "+254739936707"
-        G(Profile, telephone=phone)
-        country = G(Country, alpha2="KE", alpha3="KEN", name="Kenya")
-        location = G(Location, country=country, name="Naivasha")
-        modified = datetime.datetime.now() - datetime.timedelta(hours=0.5)
-        weather = G(CurrentWeather, location=location, created=modified, modified=modified)
-        G(IncomingMessage, processed=False, text="Weather Detailed Naivasha", phonenumber=phone)
-        responses = process_incoming_messages()
-        self.assertEqual(str(responses[0]), weather.detailed)
+    # @patch("ujumbe.apps.africastalking.tasks.send_sms")
+    # def test_default_profile_is_set_if_weather_is_requested_but_no_profile_set(self, mock_send_sms):
+    #     G(Profile, telephone="+254739936708")
+    #     G(IncomingMessage, processed=False, text="Weather*Detailed*Naivasha", phonenumber="+254739936708")
+    #     mock_send_sms.return_value = None
+    #     responses = process_incoming_messages()
+    #     self.assertIn("Your default location has been set to Naivasha.", responses[0])
+
+    # @patch("ujumbe.apps.africastalking.tasks.send_sms")
+    # def test_weather(self, mock_send_sms):
+    #     mock_send_sms.return_value.return_value = None
+    #     phone = "+254739936707"
+    #     G(Profile, telephone=phone)
+    #     country = G(Country, alpha2="KE", alpha3="KEN", name="Kenya")
+    #     location = G(Location, country=country, name="Naivasha")
+    #     weather = G(CurrentWeather, location=location)
+    #     G(IncomingMessage, processed=False, text="Weather Detailed Naivasha", phonenumber=phone)
+    #     responses = process_incoming_messages()
+    #     self.assertEqual(str(responses[0]), weather.detailed)
 
 
