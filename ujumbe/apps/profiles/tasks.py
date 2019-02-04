@@ -44,6 +44,15 @@ def send_sms(phonenumber: str, text: str):
 
 
 @task
+def send_bulk_sms(sms_list):
+    for sms in sms_list:
+        if "text" in sms and "phonenumber" in sms:
+            send_sms(text=sms["text"], phonenumber=sms["phonenumber"])
+        else:
+            logger.error("text or phonenumber not provided in sms object")
+
+
+@task
 def create_user_forecast_subscription(phonenumber: str, location_id: int, frequency: int):
     frequency = ForecastPeriods[frequency]
     p = Profile.objects.filter(telephone=phonenumber).first()
