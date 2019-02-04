@@ -92,9 +92,13 @@ class Location(TimeStampedModel):
             "language": "en-us",
             "topelevel": "false"
         }
-        response = requests.get(url=url, params=params).json()
-        self.accuweather_city_id = response["Key"]
-        self.save()
+        try:
+            response = requests.get(url=url, params=params).json()
+            self.accuweather_city_id = response["Key"]
+            self.save()
+        except Exception as e:
+            logger.error(str(e))
+            raise
 
     def geocode_location_by_google_maps(self):
         gmaps = googlemaps.Client(key=settings.GOOGLE_API_KEY)

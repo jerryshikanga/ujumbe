@@ -108,9 +108,9 @@ def set_user_location(location_id: int, phonenumber: str):
 @task
 def check_and_send_user_subscriptions():
     subscriptions = Subscription.objects.due()
-    for subscription in subscriptions:
-        try:
-            send_sms.delay(text=subscription.sms_description, phonenumber=str(subscription.profile.telephone))
-        except Exception as e:
-            logging.error("Error sending subscription"+str(e))
-    logging.info("Sent {} subscriptions".format(len(subscriptions)))
+    if subscriptions.count() > 0:
+        for subscription in subscriptions:
+            try:
+                send_sms.delay(text=subscription.sms_description, phonenumber=str(subscription.profile.telephone))
+            except Exception as e:
+                logging.error("Error sending subscription"+str(e))
