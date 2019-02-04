@@ -22,4 +22,4 @@ def process_incoming_messages():
                 })
             except Exception as e:
                 logger.error(str(e))
-        send_bulk_sms(responses)
+        send_bulk_sms.delay(responses)
