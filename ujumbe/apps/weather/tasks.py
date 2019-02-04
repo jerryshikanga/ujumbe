@@ -6,7 +6,7 @@ from ujumbe.apps.weather.models import Location, CurrentWeather, ForecastWeather
 
 
 @task
-def send_user_current_location_weather(phonenumber: str, location_id: int):
+def send_user_current_location_weather(phonenumber: str, location_id: int, detailed=False):
     location = Location.objects.get(id=location_id)
     if CurrentWeather.objects.filter(location=location).exists():
         weather = CurrentWeather.objects.filter(location=location).first()
@@ -15,7 +15,8 @@ def send_user_current_location_weather(phonenumber: str, location_id: int):
     else:
         weather = CurrentWeather.objects.create(location=location)
         weather.retrieve(chanel=settings.DEFAULT_WEATHER_SOURCE)
-    send_sms.delay(phonenumber=phonenumber, text=weather.detailed)
+    text = weather.detailed if detailed else weather.summary
+    send_sms.delay(phonenumber=phonenumber, text=text)
 
 
 @task

@@ -3,17 +3,19 @@ import logging
 
 import googlemaps
 import requests
-from django.db import models
-from django.utils import timezone
+from author.decorators import with_author
 from django.conf import settings
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from author.decorators import with_author
 from django_extensions.db.models import TimeStampedModel
 from djchoices import ChoiceItem, DjangoChoices
 
 from ujumbe.apps.weather.handlers import OpenWeather, AccuWeather, NetAtmo
+
+
+logger = logging.getLogger(__name__)
 
 
 # Create your models here.
@@ -126,9 +128,9 @@ class Location(TimeStampedModel):
             return location
 
         gmaps = googlemaps.Client(key=settings.GOOGLE_API_KEY)
-        name += ", " + country.name
-        geocode_result = gmaps.geocode(name)
         try:
+            name += ", " + country.name
+            geocode_result = gmaps.geocode(name)
             result = geocode_result[0]
             geometry = result["geometry"]
             location = geometry["location"]
@@ -239,7 +241,7 @@ class CurrentWeather(LocationWeather):
         verbose_name_plural = "Current Weather"
 
     def is_valid(self):
-        return (datetime.datetime.now() - datetime.timedelta(hours=3)) <= self.modified
+        return (datetime.datetime.now() - datetime.timedelta(hours=1)) <= self.modified
 
     @property
     def description(self):
@@ -249,6 +251,17 @@ class CurrentWeather(LocationWeather):
     def detailed(self):
         return "Current weather {}".format(super(CurrentWeather, self).detailed)
 
+    @staticmethod
+    def get_current_location_weather_text(location_id: int, detailed: bool = False):
+        location = Location.objects.get(id=location_id)
+        if CurrentWeather.objects.filter(location=location).exists():
+            weather = CurrentWeather.objects.filter(location=location).first()
+            weather = weather if weather.is_valid() else weather.retrieve(chanel=settings.DEFAULT_WEATHER_SOURCE)
+        else:
+            weather = CurrentWeather.objects.create(location=location)
+            weather = weather.retrieve(chanel=settings.DEFAULT_WEATHER_SOURCE)
+        return weather.detailed if detailed else weather.summary
+
     def retrieve(self, chanel):
         if chanel == LocationWeather.WeatherHandlers.accuweather:
             self.handler = LocationWeather.WeatherHandlers.accuweather
@@ -257,7 +270,8 @@ class CurrentWeather(LocationWeather):
             weather = AccuWeather().get_current_weather(accuweather_city_id=self.location.accuweather_city_id)
         elif chanel == LocationWeather.WeatherHandlers.openweather:
             self.handler = LocationWeather.WeatherHandlers.openweather
-            weather = OpenWeather().get_current_weather(latitude=self.location.latitude, longitude=self.location.longitude)
+            weather = OpenWeather().get_current_weather(latitude=self.location.latitude,
+                                                        longitude=self.location.longitude)
         elif chanel == LocationWeather.WeatherHandlers.netatmo:
             self.handler = LocationWeather.WeatherHandlers.netatmo
             weather = NetAtmo().get_current_weather(latitude=self.location.latitude, longitude=self.location.longitude)
@@ -275,6 +289,8 @@ class CurrentWeather(LocationWeather):
         self.clouds_all = weather["clouds_all"]
         # self.rain = weather["rain"]
         self.save()
+
+        return self
 
 
 class ForecastWeather(LocationWeather):

@@ -56,7 +56,7 @@ class AtOutgoingSMSCallback(DRFView):
 
 
 class AtUssdcallbackView(DRFView):
-    request_successful_response = "Your response has been recieved and will be processed. You will be notified via " \
+    request_successful_response = "Your response has been received and will be processed. You will be notified via " \
                                   "SMS.\n "
     invalid_data_response = "You have entered invalid data. Please try again.\n"
 
