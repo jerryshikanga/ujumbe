@@ -95,11 +95,11 @@ WSGI_APPLICATION = 'ujumbe.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'HOST': env('DEFAULT_DB_HOST'),
+        'HOST': env('DEFAULT_DB_HOST', default="localhost"),
         'PORT':env('DEFAULT_DB_PORT', default='3306'),
-        'NAME': env("DEFAULT_DB_NAME"),
-        'USER': env("DEFAULT_DB_USER"),
-        'PASSWORD': env("DEFAULT_DB_PASSWORD")
+        'NAME': env("DEFAULT_DB_NAME", default="ujumbe"),
+        'USER': env("DEFAULT_DB_USER", default="root"),
+        'PASSWORD': env("DEFAULT_DB_PASSWORD", default="")
     }
 }
 

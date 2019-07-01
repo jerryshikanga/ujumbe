@@ -1,0 +1,22 @@
+language: python
+sudo : required
+dist: xenial
+python:
+  - "3.5"
+env :
+  matrix:
+    - DJANGO="Django>2"
+services:
+  - mysql
+addons:
+  apt:
+    sources:
+      - mysql-5.7-trusty
+    packages:
+      - mysql-server
+install:
+    - pip install -r requirements.txt
+before_script:
+  - mysql -e 'create database ujumbe;'
+script:
+    - python manage.py test
