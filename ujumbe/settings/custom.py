@@ -4,8 +4,12 @@ import logging.config
 from ujumbe.settings.base import *
 from ujumbe.settings import check_if_config_dict_exists
 
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default='amqp://oakfxmcf:KEc0LZ9y72l000YqU8P-CcZ7gBob4IXC@cat.rmq'
-                                                     '.cloudamqp.com/oakfxmcf')
+# celery
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379')
+CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='redis://localhost:6379')
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
