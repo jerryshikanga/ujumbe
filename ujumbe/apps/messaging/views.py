@@ -10,8 +10,8 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.views import View as DRFView
 
-from ujumbe.apps.africastalking.models import UssdSession
-from ujumbe.apps.africastalking.serializers import TelerivetSerializer, AfricastalkingIncomingMessageSerializer, \
+from ujumbe.apps.messaging.models import UssdSession
+from ujumbe.apps.messaging.serializers import TelerivetSerializer, AfricastalkingIncomingMessageSerializer, \
     AfricastalkingOutgoingMessageSerializer
 from ujumbe.apps.profiles.models import Profile, Subscription
 from ujumbe.apps.profiles.tasks import create_user_forecast_subscription, set_user_location, \

@@ -121,10 +121,11 @@ class Location(TimeStampedModel):
             self.save()
 
         except Exception as e:
-            logging.error(str(e))
+            logger.error(str(e))
 
     @classmethod
     def try_resolve_location_by_name(cls, name: str, phonenumber: str):
+        import pdb; pdb.set_trace()
         from phone_iso3166.country import phone_country
         country = Country.objects.filter(alpha2=phone_country(phonenumber)).first()
         location = Location.objects.in_country(country).filter(name__icontains=name).first()
@@ -157,7 +158,7 @@ class Location(TimeStampedModel):
             location_obj.save()
             return location_obj
         except Exception as e:
-            logging.error(str(e))
+            logger.error(str(e))
             return None
 
 

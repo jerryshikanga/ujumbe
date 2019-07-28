@@ -107,8 +107,13 @@ def create_celery_beat_tasks():
     )
     PeriodicTask.objects.get_or_create(
         interval=schedule,
-        name="Check and process messages",
-        task="ujumbe.apps.africastalking.tasks.process_incoming_messages"
+        name="Check and process incoming messages",
+        task="ujumbe.apps.messaging.tasks.process_incoming_messages"
+    )
+    PeriodicTask.objects.get_or_create(
+        interval=schedule,
+        name="Check and process outgoing messages",
+        task="ujumbe.apps.messaging.tasks.process_outgoing_messages"
     )
 
 

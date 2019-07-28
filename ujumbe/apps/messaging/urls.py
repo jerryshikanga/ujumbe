@@ -1,7 +1,7 @@
 from django.urls import path
-from ujumbe.apps.africastalking import views
+from ujumbe.apps.messaging import views
 
-app_name = "africastalking"
+app_name = "messaging"
 
 urlpatterns = [
     path("telerivet/callback/", views.TelerivetWebhookView.as_view(), name="telerivet_webhook_view"),

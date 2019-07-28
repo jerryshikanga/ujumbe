@@ -1,6 +1,6 @@
 from ujumbe.apps.profiles.models import Profile, AccountCharges, Subscription
 from ujumbe.apps.weather.models import Location, Country, CurrentWeather, ForecastWeather
-from ujumbe.apps.africastalking.models import IncomingMessage, OutgoingMessages
+from ujumbe.apps.messaging.models import IncomingMessage, OutgoingMessages
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from django.contrib.auth import get_user_model
 

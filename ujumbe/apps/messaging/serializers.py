@@ -4,7 +4,7 @@ from django.conf import settings
 from phonenumber_field.validators import validate_international_phonenumber
 from rest_framework import serializers
 
-from ujumbe.apps.africastalking.models import IncomingMessage, Message, OutgoingMessages
+from ujumbe.apps.messaging.models import IncomingMessage, Message, OutgoingMessages
 
 logger = logging.getLogger(__name__)
 
