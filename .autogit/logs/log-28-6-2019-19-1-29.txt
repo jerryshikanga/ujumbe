@@ -1,0 +1,18 @@
+-------------------- Auto-Git Log --------------------
+		Sun Jul 28 2019 19:01:29 GMT+0300 (East Africa Time)
+------------------------------------------------------
+
+Modified files:
+* ujumbe/apps/africastalking/models.py
+* ujumbe/apps/africastalking/tasks.py
+* ujumbe/apps/profiles/models.py
+
+
+Created files:
+* .autogit/logs/log-28-6-2019-18-27-11.txt
+
+
+Deleted files:
+
+
+Renamed files:

@@ -1,5 +1,5 @@
 import logging
-
+import requests
 from celery import task
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -14,8 +14,16 @@ from ujumbe.apps.profiles.handlers import Telerivet, Africastalking
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
-def get_translated_text(text,language_code):
-    
+
+
+def get_translated_text(text, language_code):
+    response = requests.get("https://systran-systran-platform-for-language-processing-v1.p.rapidapi.com/translation/text/translate?source=en&target="+language_code+"input="+text,
+                           headers={
+                               "X-RapidAPI-Host": "systran-systran-platform-for-language-processing-v1.p.rapidapi.com",
+                               "X-RapidAPI-Key": "0ffc62aaf7mshc0e5b052301c0f9p11770ejsn05570ec4e358"
+                           })
+    return response
+
 
 @task
 def send_sms(phonenumber: str, text: str):
@@ -26,8 +34,8 @@ def send_sms(phonenumber: str, text: str):
 
     profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
         telephone=phonenumber).exists() else None
-    if profile.preffered_language=="en":
-        pass
+    if profile.preffered_language != "en":
+        text = get_translated_text(text, profile.preffered_language)
     charge = AccountCharges.objects.create(
         profile=profile,
         cost=float(data["cost"]),
