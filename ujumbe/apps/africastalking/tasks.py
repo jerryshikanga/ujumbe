@@ -14,7 +14,8 @@ from ujumbe.apps.profiles.handlers import Telerivet, Africastalking
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
-
+def get_translated_text(text,language_code):
+    
 
 @task
 def send_sms(phonenumber: str, text: str):
@@ -25,6 +26,8 @@ def send_sms(phonenumber: str, text: str):
 
     profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
         telephone=phonenumber).exists() else None
+    if profile.preffered_language=="en":
+        pass
     charge = AccountCharges.objects.create(
         profile=profile,
         cost=float(data["cost"]),

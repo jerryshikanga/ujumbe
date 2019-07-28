@@ -26,6 +26,7 @@ class Profile(TimeStampedModel):
     telephone = PhoneNumberField(unique=True, null=False, blank=False)
     location = models.ForeignKey(Location, null=True, blank=True, on_delete=models.SET_NULL)
     balance = models.FloatField(default=0, null=False, blank=False)
+    preffered_language=models.CharField(default="en",null=False,blank=False)
 
     def __str__(self):
         return "Name : {} Phone : {}.".format(self.user.get_full_name() if self.user.get_full_name() is not None

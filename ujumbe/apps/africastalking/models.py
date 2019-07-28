@@ -181,6 +181,8 @@ class OutgoingMessages(Message):
     delivery_status = models.CharField(null=False, blank=False, max_length=50, choices=MessageDeliveryStatus.choices,
                                        default=MessageDeliveryStatus.submitted)
     failure_reason = models.CharField(null=True, blank=True, max_length=50)
+    response = models.CharField(max_length=128)
+    translated_response=models.CharField(max_length=128)
 
 
 @with_author
