@@ -1,15 +1,12 @@
 import logging
 
 from celery import task
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from phonenumber_field.validators import validate_international_phonenumber
 
-from ujumbe.apps.africastalking.models import OutgoingMessages
+from ujumbe.apps.messaging.models import OutgoingMessages
 from ujumbe.apps.profiles.models import Profile, AccountCharges, Subscription
 from ujumbe.apps.weather.models import Location
 from ujumbe.apps.weather.utils import ForecastPeriods
-from ujumbe.apps.profiles.handlers import Telerivet, Africastalking
 
 User = get_user_model()
 
@@ -17,39 +14,63 @@ logger = logging.getLogger(__name__)
 
 
 @task
-def send_sms(phonenumber: str, text: str):
-    validate_international_phonenumber(phonenumber)
-    data = Telerivet.send_sms(phonenumber=phonenumber, text=text) \
-        if settings.TELERIVET_PROJECT_ID and settings.TELERIVET_API_KEY \
-        else Africastalking.send_sms(phonenumber=phonenumber, text=text)
-
-    profile = Profile.objects.get(telephone=phonenumber) if Profile.objects.filter(
-        telephone=phonenumber).exists() else None
-    charge = AccountCharges.objects.create(
-        profile=profile,
-        cost=float(data["cost"]),
-        currency_code=data["currency_code"],
-    )
-    outgoing_sms = OutgoingMessages.objects.create(
-        phonenumber=phonenumber,
-        text=text,
-        handler=data["handler"],
-        delivery_status=data["delivery_status"],
-        provider_id=data["provider_id"],
-        charge=charge
-    )
-    charge.description = outgoing_sms.summary
-    charge.save()
-    return outgoing_sms
+def create_profile(first_name, last_name, phonenumber, password=None, email=None):
+    if Profile.objects.filter(telephone=phonenumber).exists():
+        message = "An account with the phone number {} already exists".format(phonenumber)
+        OutgoingMessages.objects.create(phonenumber=phonenumber, text=message)
+    else:
+        username = str(phonenumber).replace("+", "")
+        user = User.objects.create(
+            first_name=first_name,
+            last_name=last_name,
+            username=username
+        )
+        if email is not None:
+            user.email = email
+        password = password if password is not None else phonenumber
+        user.set_password(password)
+        user.save()
+        profile = Profile.objects.create(
+            user=user,
+            telephone=phonenumber
+        )
+        message = "Hello {}, your account has been created successfully. Your username is {}".format(
+            profile.user.get_full_name(), profile.user.username)
+        OutgoingMessages.objects.create(phonenumber=phonenumber, text=message)
 
 
 @task
-def send_bulk_sms(sms_list):
-    for sms in sms_list:
-        if "text" in sms and "phonenumber" in sms:
-            send_sms(text=sms["text"], phonenumber=sms["phonenumber"])
-        else:
-            logger.error("text or phonenumber not provided in sms object")
+def create_subscription(phonenumber, type, frequency, location_name):
+    profile = Profile.resolve_profile_from_phonenumber(phonenumber)
+    location = profile.location
+    if location_name is not None:
+        resolved_location = Location.try_resolve_location_by_name(location_name)
+        if resolved_location is None:
+            text = "Location {} cannot be resolved.".format(location_name)
+            OutgoingMessages.objects.create(phonenumber=phonenumber, text=text)
+            return
+        location = resolved_location
+    if location is None:
+        text = "Please set a default location or provide location name."
+        OutgoingMessages.objects.create(phonenumber=phonenumber, text=text)
+        return
+    subscription, created = Subscription.objects.get_or_create(
+        profile=profile,
+        subscription_type=type,
+        frequency=frequency,
+        location=location
+    )
+    if created:
+        response = subscription.sms_description
+    else:
+        response = "You already have a subscription {}. ".format(subscription)
+    OutgoingMessages.objects.create(phonenumber=phonenumber, text=response)
+
+
+@task
+def cancel_user_subscriptions(phonenumber):
+    profile = Profile.resolve_profile_from_phonenumber(phonenumber)
+    # profile.subscription_set.
 
 
 @task
@@ -63,21 +84,22 @@ def create_user_forecast_subscription(phonenumber: str, location_id: int, freque
         frequency=frequency
     )
     text = "Subscription {} created successfully.".format(str(s))
-    send_sms.delay(phonenumber=phonenumber, text=text)
+    OutgoingMessages.objects.create(phonenumber=phonenumber, text=text)
 
 
 @task
 def end_user_subscription(phonumber: str, subscription_id: int):
     s = Subscription.objects.get(id=subscription_id)
     s.deactivate()
-    send_sms.delay(phonenumber=phonumber, text="Deactivated subscription {}".format(s))
+    text = "Deactivated subscription {}".format(s)
+    OutgoingMessages.objects.create(phonenumber=phonumber, text=text)
 
 
 @task
 def send_user_balance_notification(phonenumber: str):
     p = Profile.objects.filter(telephone=phonenumber).first()
     text = "Account {} Balance {}".format(p.full_name, p.balance)
-    send_sms.delay(phonenumber=phonenumber, text=text)
+    OutgoingMessages.objects.create(phonenumber=phonenumber, text=text)
 
 
 @task
@@ -87,22 +109,25 @@ def send_user_account_charges(phonenumber: str):
     text = ""
     for c in charges:
         text += str(c)
-    send_sms.delay(phonenumber=phonenumber, text=text)
+    OutgoingMessages.objects.create(phonenumber=phonenumber, text=text)
 
 
 @task
-def set_user_location(location_id: int, phonenumber: str):
-    p = Profile.objects.filter(telephone=phonenumber).first()
-    l = Location.objects.get(id=location_id)
-    text = ""
-    init_loc_text = "Your location has been changed from {}".format(str(p.location)) if p.location else None
-    p.location = l
-    p.save()
-    if init_loc_text is not None:
-        text += "to {} ".format(str(l))
-    else:
-        text = "Your location has been set to {}.".format(str(l))
-    send_sms.delay(phonenumber=phonenumber, text=text)
+def set_user_location(location_name: str, phonenumber: str):
+    profile = Profile.resolve_profile_from_phonenumber(phonenumber)
+    try:
+        location = Location.try_resolve_location_by_name(name=location_name, phonenumber=phonenumber)
+        if location is None:
+            response = "Location named {} could not be determined. Please contact support.".format(location_name)
+        else:
+            profile.location = location
+            profile.save()
+            response = "Your location has been successfully set as {}".format(location.name)
+    except Exception as e:
+        logger.error(str(e))
+        response = "Location named {} could not be determined. Please contact support.".format(location_name)
+    finally:
+        OutgoingMessages.objects.create(phonenumber=phonenumber, text=response)
 
 
 @task
@@ -110,7 +135,18 @@ def check_and_send_user_subscriptions():
     subscriptions = Subscription.objects.due()
     if subscriptions.count() > 0:
         for subscription in subscriptions:
-            try:
-                send_sms.delay(text=subscription.sms_description, phonenumber=str(subscription.profile.telephone))
-            except Exception as e:
-                logging.error("Error sending subscription"+str(e))
+            OutgoingMessages.objects.create(text=subscription.sms_description,
+                                            phonenumber=str(subscription.profile.telephone))
+
+
+@task
+def set_user_language(phonenumber, language):
+    if language not in ("en", "sw"):
+        text = "Invalid language code. Currently available choices are en, sw."
+        OutgoingMessages.objects.create(phonenumber=phonenumber, text=text)
+        return
+    profile = Profile.resolve_profile_from_phonenumber(phonenumber)
+    profile.language_code = language
+    profile.save()
+    text = "Your language has been successfully set to {}".format(language)
+    OutgoingMessages.objects.create(phonenumber=phonenumber, text=text)

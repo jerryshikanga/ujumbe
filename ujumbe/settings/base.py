@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'djchoices',
     'django_celery_beat',
 
-    'ujumbe.apps.africastalking.apps.AfricastalkingConfig',
+    'ujumbe.apps.messaging.apps.AfricastalkingConfig',
     'ujumbe.apps.profiles.apps.ProfilesConfig',
     'ujumbe.apps.weather.apps.WeatherConfig'
 ]

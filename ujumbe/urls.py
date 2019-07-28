@@ -22,7 +22,7 @@ from ujumbe import views
 urlpatterns = [
         path("", views.home, name="home"),
         path('admin/', admin.site.urls),
-        path('africastalking/', include('ujumbe.apps.africastalking.urls')),
+        path('messaging/', include('ujumbe.apps.messaging.urls')),
         path('profile/', include('ujumbe.apps.profiles.urls')),
         path('weather/', include('ujumbe.apps.weather.urls')),
     ]

@@ -22,10 +22,15 @@ logger = logging.getLogger(__name__)
 # Create your models here.
 @with_author
 class Profile(TimeStampedModel):
+    class SupportedLanguages(DjangoChoices):
+        English = ChoiceItem("en")
+        Swahili = ChoiceItem("sw")
+
     user = models.OneToOneField(User, null=True, blank=True, on_delete=models.SET_NULL)
     telephone = PhoneNumberField(unique=True, null=False, blank=False)
     location = models.ForeignKey(Location, null=True, blank=True, on_delete=models.SET_NULL)
     balance = models.FloatField(default=0, null=False, blank=False)
+    language_code = models.CharField(max_length=2, null=False, blank=False, default="en")
 
     def __str__(self):
         return "Name : {} Phone : {}.".format(self.user.get_full_name() if self.user.get_full_name() is not None
@@ -36,34 +41,13 @@ class Profile(TimeStampedModel):
         verbose_name = "Profile"
         verbose_name_plural = "Profiles"
 
+    @property
+    def phonenumber(self):
+        return self.telephone
+
     @classmethod
-    def create_customer_account(cls, first_name: str, last_name: str, phonenumber: str, password: str = None,
-                                email: str = None):
-        if Profile.objects.filter(telephone=phonenumber).exists():
-            message = "Cant create profile with phone number {}. It already exists".format(phonenumber)
-        else:
-            username = email if email is not None else str(first_name + last_name).strip().replace(" ", "").lower()
-            if User.objects.filter(username=username).exists():
-                import random, datetime
-                random.seed(datetime.datetime.now())
-                username = str(random.randint(1, 99)) + username
-            user = User.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                username=username
-            )
-            if email is not None:
-                user.email = email
-            password = password if password is not None else phonenumber
-            user.set_password(password)
-            user.save()
-            profile = Profile.objects.create(
-                user=user,
-                telephone=phonenumber
-            )
-            message = "Hello {}, your account has been created successfully. Your username is {}".format(
-                profile.user.get_full_name(), profile.user.username)
-        return message
+    def resolve_profile_from_phonenumber(cls, phonenumber):
+        return Profile.objects.filter(telephone=phonenumber).first()
 
 
 @with_author

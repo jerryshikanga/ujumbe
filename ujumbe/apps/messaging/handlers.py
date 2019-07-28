@@ -1,11 +1,14 @@
 import json
+import logging
 
 import africastalking
 import requests
 from django.conf import settings
 from requests.auth import HTTPBasicAuth
 
-from ujumbe.apps.africastalking.models import Message
+from .models import Message
+
+logger = logging.getLogger(__name__)
 
 
 class TelecomHandler(object):
@@ -27,6 +30,7 @@ class Telerivet(TelecomHandler):
         }
         _response = requests.post(url=url, data=json.dumps(data), headers=headers,
                                   auth=HTTPBasicAuth(settings.TELERIVET_API_KEY, ''))
+        logger.debug("Telerivet Response {}".format( _response.text))
         if _response.ok:
             response = _response.json()
             return {
@@ -46,6 +50,7 @@ class Africastalking(TelecomHandler):
         africastalking.initialize(settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY)
         sms = africastalking.SMS
         response = sms.send(text, [phonenumber, ], )
+        logger.debug("Africastalking reponse {}".format(str(response)))
         message_data = response["SMSMessageData"]["Recipients"][0]  # only one recipient
         status_code = message_data["statusCode"]
         cost_str_parts = str(message_data["cost"]).split(" ")
