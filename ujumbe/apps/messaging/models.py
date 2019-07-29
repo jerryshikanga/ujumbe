@@ -103,56 +103,61 @@ class IncomingMessage(Message):
         if keyword != MessageKeywords.Register:
             self.check_profile_registration()
 
-        if keyword == MessageKeywords.Register:
-            if len(parts)<3:
-                self.mark_processed()
-                OutgoingMessages.objects.create(text="Please provide both first and last name", phonenumber=self.phonenumber)
-                return
-            from ujumbe.apps.profiles.tasks import create_profile
-            create_profile(first_name=parts[1], last_name=parts[2], phonenumber=str(self.phonenumber))
-        elif keyword == MessageKeywords.CurrentWeather:
-            from ujumbe.apps.weather.tasks import process_current_weather_request
-            detailed = False
-            location_name = None
-            if len(parts) > 1:
-                if parts[1] == "DETAILED":
-                    detailed = True
-                if parts[1] == "SUMMARY":
-                    detailed = False
+        try:
+            if keyword == MessageKeywords.Register:
+                if len(parts) < 3:
+                    self.mark_processed()
+                    OutgoingMessages.objects.create(text="Please provide both first and last name",
+                                                    phonenumber=self.phonenumber)
+                    return
+                from ujumbe.apps.profiles.tasks import create_profile
+                create_profile(first_name=parts[1], last_name=parts[2], phonenumber=str(self.phonenumber))
+            elif keyword == MessageKeywords.CurrentWeather:
+                from ujumbe.apps.weather.tasks import process_current_weather_request
+                detailed = False
+                location_name = None
+                if len(parts) > 1:
+                    if parts[1] == "DETAILED":
+                        detailed = True
+                    if parts[1] == "SUMMARY":
+                        detailed = False
+                    else:
+                        location_name = parts[1]
+                if len(parts) > 2:
+                    location_name = parts[2]
+                process_current_weather_request(self.phonenumber, detailed, location_name)
+            elif keyword == MessageKeywords.Location:
+                if len(parts) <= 1:
+                    response = "Please provide a location name."
+                    OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
                 else:
                     location_name = parts[1]
-            if len(parts) > 2:
-                location_name = parts[2]
-            process_current_weather_request(self.phonenumber, detailed, location_name)
-        elif keyword == MessageKeywords.Location:
-            if len(parts) <= 1:
-                response = "Please provide a location name."
+                    from ujumbe.apps.profiles.tasks import set_user_location
+                    set_user_location(location_name, self.phonenumber)
+            elif keyword == MessageKeywords.Language:
+                if len(parts) < 2:
+                    response = "Please provide a language. Currently available choices are en, sw."
+                    OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+                    self.mark_processed()
+                    return
+                from ujumbe.apps.profiles.tasks import set_user_language
+                set_user_language(self.phonenumber, parts[1])
+            elif keyword == MessageKeywords.Subscribe:
+                subscription_type = parts[1]
+                frequency = parts[2]
+                location_name = parts[3] if len(parts) > 3 else None
+                from ujumbe.apps.profiles.tasks import create_subscription
+                create_subscription(self.phonenumber, subscription_type, frequency, location_name)
+            elif keyword == MessageKeywords.Unsubscribe:
+                from ujumbe.apps.profiles.tasks import cancel_user_subscriptions
+                cancel_user_subscriptions(self.phonenumber)
+            elif keyword == MessageKeywords.Forecast:
+                response = "This feature is coming soon! Stay put. "
                 OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-            else:
-                location_name = parts[1]
-                from ujumbe.apps.profiles.tasks import set_user_location
-                set_user_location(location_name, self.phonenumber)
-        elif keyword == MessageKeywords.Language:
-            if len(parts) < 2:
-                response = "Please provide a language. Currently available choices are en, sw."
-                OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-                self.mark_processed()
-                return
-            from ujumbe.apps.profiles.tasks import set_user_language
-            set_user_language(self.phonenumber, parts[1])
-        elif keyword == MessageKeywords.Subscribe:
-            subscription_type = parts[1]
-            frequency = parts[2]
-            location_name = parts[3] if len(parts) > 3 else None
-            from ujumbe.apps.profiles.tasks import create_subscription
-            create_subscription(self.phonenumber, subscription_type, frequency, location_name)
-        elif keyword == MessageKeywords.Unsubscribe:
-            from ujumbe.apps.profiles.tasks import cancel_user_subscriptions
-            cancel_user_subscriptions(self.phonenumber)
-        elif keyword == MessageKeywords.Forecast:
-            response = "This feature is coming soon! Stay put. "
-            OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-        self.mark_processed()
+        except MessageException as e:
+            logger.error(str(e))
+        finally:
+            self.mark_processed()
 
 
 @with_author
