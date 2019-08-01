@@ -51,7 +51,7 @@ def send_user_product_price_today(product_name, phonenumber, location_name=None)
     product_price = ProductPrice.objects.get(product=product, location=nearest_location)
     text = "Price for Product {} is {} - {} {} for {} {} at Location {} which is {} kilometers away from {}.".format(
         product.name, product_price.low_price, product_price.high_price, product_price.currency_code,
-        product_price.quantity, product_price.measurement_unit, location.name, min_distance, location_name
+        product_price.quantity, product_price.measurement_unit, nearest_location.name, min_distance, location.name
     )
     OutgoingMessages.objects.create(text=text, phonenumber=phonenumber)
     return
