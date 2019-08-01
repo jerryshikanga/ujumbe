@@ -83,7 +83,7 @@ class IncomingMessage(Message):
         keyword = str(parts[0]).upper().strip()
 
         # Check if sender is same as recipient and skip
-        if not self.check_shortcode_phonenumer_match():
+        if self.check_shortcode_phonenumer_match():
             self.mark_processed()
             return
 
