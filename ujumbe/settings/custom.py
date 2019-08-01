@@ -1,8 +1,18 @@
 import logging
 import logging.config
 
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
 from ujumbe.settings.base import *
 from ujumbe.settings import check_if_config_dict_exists
+
+# Logging by Sentry
+SENTRY_DSN = env("SENTRY_DSN", default="")
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    integrations=[DjangoIntegration()]
+)
 
 # celery
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379')
@@ -83,11 +93,11 @@ ACCUWEATHER_API_KEY = env("ACCUWEATHER_API_KEY", default="")
 
 DEFAULT_WEATHER_SOURCE = env("DEFAULT_WEATHER_SOURCE", default="AccuWeather")
 
-TELERIVET_API_KEY = env("TELERIVET_API_KEY", default="")
-TELERIVET_PROJECT_ID = env("TELERIVET_PROJECT_ID", default="")
+TELERIVET_API_KEY = env("TELERIVET_API_KEY", default=None)
+TELERIVET_PROJECT_ID = env("TELERIVET_PROJECT_ID", default=None)
 TELERIVET_WEBHOOK_SECRET = env("TELERIVET_WEBHOOK_SECRET", default="")
 TELERIVET_SMS_SEND_COST = env("TELERIVET_SMS_SEND_COST", default="")
 TELERIVET_SMS_SEND_CURRENCY = env("TELERIVET_SMS_SEND_CURRENCY", default="KES")
 
-YANDEX_TRANSLATE_API_KEY = env("YANDEX_TRANSLATE_API_KEY")
+YANDEX_TRANSLATE_API_KEY = env("YANDEX_TRANSLATE_API_KEY", default="")
 YANDEX_TRANSLATE_API_URL = "https://translate.yandex.net/api/v1.5/tr/translate"
