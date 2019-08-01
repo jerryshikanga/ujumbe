@@ -63,6 +63,7 @@ requests==2.19.1
 requests-mock==1.5.2
 rsa==4.0
 schema==0.6.8
+sentry-sdk==0.10.2
 setuptools-git==1.2
 six==1.11.0
 structlog==18.2.0
