@@ -44,7 +44,7 @@ def send_user_product_price_today(product_name, phonenumber, location_name=None)
         return
     locations = []
     for l in ProductPrice.objects.values_list('location'):
-        location = Location.objects.get(id=l[0]).name
+        location = Location.objects.get(id=l[0])
         locations.append({"location_id": location.id, "lat_long": (location.latitude, location.longitude)})
     current_coordinates = (location.latitude, location.longitude)
     min_distance, nearest_location = Location.calculate_nearest(current_coordinates, locations)
