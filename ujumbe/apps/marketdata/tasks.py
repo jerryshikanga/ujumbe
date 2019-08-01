@@ -47,6 +47,7 @@ def send_user_product_price_today(product_name, phonenumber, location_name=None)
         locations.append({"location_id": l.id, "lat_long": (l.latitude, l.longitude)})
     current_coordinates = (location.latitude, location.longitude)
     min_distance, nearest_location = Location.calculate_nearest(current_coordinates, locations)
+    nearest_location = Location.objects.get(id=nearest_location)
     product = product_queryset.first()
     product_price = ProductPrice.objects.get(product=product, location=nearest_location)
     text = "Price for Product {} is {} - {} {} for {} {} at Location {} which is {} kilometers away from {}.".format(
