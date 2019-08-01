@@ -99,6 +99,7 @@ class IncomingMessage(Message):
         if keyword != MessageKeywords.Register and not self.is_profile_registered():
             text = "Please register for Ujumbe to use any of its services"
             OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=text)
+            self.mark_processed()
             return
 
         if keyword == MessageKeywords.Register:
@@ -109,6 +110,7 @@ class IncomingMessage(Message):
                 return
             from ujumbe.apps.profiles.tasks import create_profile
             create_profile(first_name=parts[1], last_name=parts[2], phonenumber=str(self.phonenumber))
+            self.mark_processed()
         elif keyword == MessageKeywords.CurrentWeather:
             from ujumbe.apps.weather.tasks import process_current_weather_request
             detailed = False
@@ -123,14 +125,18 @@ class IncomingMessage(Message):
             if len(parts) > 2:
                 location_name = parts[2]
             process_current_weather_request(self.phonenumber, detailed, location_name)
+            self.mark_processed()
+            return
         elif keyword == MessageKeywords.Location:
             if len(parts) <= 1:
                 response = "Please provide a location name."
                 OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+                self.mark_processed()
             else:
                 location_name = parts[1]
                 from ujumbe.apps.profiles.tasks import set_user_location
                 set_user_location(location_name, self.phonenumber)
+                self.mark_processed()
         elif keyword == MessageKeywords.Language:
             if len(parts) < 2:
                 response = "Please provide a language. Currently available choices are en, sw."
@@ -139,18 +145,26 @@ class IncomingMessage(Message):
                 return
             from ujumbe.apps.profiles.tasks import set_user_language
             set_user_language(self.phonenumber, parts[1])
+            self.mark_processed()
+            return
         elif keyword == MessageKeywords.Subscribe:
             subscription_type = parts[1]
             frequency = parts[2]
             location_name = parts[3] if len(parts) > 3 else None
             from ujumbe.apps.profiles.tasks import create_subscription
             create_subscription(self.phonenumber, subscription_type, frequency, location_name)
+            self.mark_processed()
+            return
         elif keyword == MessageKeywords.Unsubscribe:
             from ujumbe.apps.profiles.tasks import cancel_user_subscriptions
             cancel_user_subscriptions(self.phonenumber)
+            self.mark_processed()
+            return
         elif keyword == MessageKeywords.Forecast:
             response = "This feature is coming soon! Stay put. "
             OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+            self.mark_processed()
+            return
         elif keyword == MessageKeywords.Market:
             from ujumbe.apps.marketdata.tasks import send_user_product_price_today
             if len(parts) > 1:
@@ -160,11 +174,12 @@ class IncomingMessage(Message):
                     location_name = parts[2]
                 send_user_product_price_today.delay\
                     (product_name, phonenumber=str(self.phonenumber), location_name=location_name)
+                self.mark_processed()
+                return
             else:
                 response = "Please provide product name."
                 OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-
-        self.mark_processed()
+                self.mark_processed()
 
 
 @with_author
@@ -194,6 +209,11 @@ class OutgoingMessages(Message):
         if profile_qs.exists():
             profile = profile_qs.first()
         validate_international_phonenumber(self.phonenumber)
+
+        #  We dont want to send repetitive messages, mark such as processed and skip
+        if OutgoingMessages.objects.filter(phonenumber=self.phonenumber).order_by("-id").first().text == self.text:
+            self.mark_processed()
+            return
 
         text = self.text
         if profile is not None and profile.language_code != Profile.SupportedLanguages.English:
