@@ -203,6 +203,14 @@ class OutgoingMessages(Message):
         with transaction.atomic():
             self.send()
 
+    def check_last_sms_match(self):
+        qs = OutgoingMessages.objects.exclude(id__in=[self.id, ])\
+                .filter(phonenumber=self.phonenumber)\
+                .order_by("-id")
+        if qs.exists():
+            return qs.first().text == self.text
+        return False
+
     def send(self):
         profile = None
         profile_qs = Profile.objects.filter(telephone=self.phonenumber)
@@ -211,9 +219,7 @@ class OutgoingMessages(Message):
         validate_international_phonenumber(self.phonenumber)
 
         #  We dont want to send repetitive messages, mark such as processed and skip
-        if OutgoingMessages.objects.exclude(id__in=[self.id, ])\
-                .filter(phonenumber=self.phonenumber)\
-                .order_by("-id").first().text == self.text:
+        if self.check_last_sms_match():
             self.mark_processed()
             return
 
