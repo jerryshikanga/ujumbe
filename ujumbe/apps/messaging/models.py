@@ -211,7 +211,9 @@ class OutgoingMessages(Message):
         validate_international_phonenumber(self.phonenumber)
 
         #  We dont want to send repetitive messages, mark such as processed and skip
-        if OutgoingMessages.objects.filter(phonenumber=self.phonenumber).order_by("-id").first().text == self.text:
+        if OutgoingMessages.objects.exclude(id__in=[self.id, ])\
+                .filter(phonenumber=self.phonenumber)\
+                .order_by("-id").first().text == self.text:
             self.mark_processed()
             return
 
