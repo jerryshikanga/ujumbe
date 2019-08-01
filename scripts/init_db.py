@@ -116,12 +116,12 @@ def create_celery_beat_tasks():
         name="Check and process outgoing messages",
         task="ujumbe.apps.messaging.tasks.process_outgoing_messages"
     )
-    daily_schedule, created = IntervalSchedule.objects.get_or_create(
-        every=10,
-        period=IntervalSchedule.SECONDS
+    quater_daily, created = IntervalSchedule.objects.get_or_create(
+        every=6,
+        period=IntervalSchedule.HOURS
     )
     PeriodicTask.objects.get_or_create(
-        interval=daily_schedule,
+        interval=quater_daily,
         name="Update product prices today",
         task="ujumbe.apps.marketdata.tasks.get_product_prices"
     )
