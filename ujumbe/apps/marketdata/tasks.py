@@ -43,8 +43,9 @@ def send_user_product_price_today(product_name, phonenumber, location_name=None)
         OutgoingMessages.objects.create(text=text, phonenumber=phonenumber)
         return
     locations = []
-    for l in Location.objects.all():
-        locations.append({"location_id": l.id, "lat_long": (l.latitude, l.longitude)})
+    for l in ProductPrice.objects.values_list('location'):
+        location = Location.objects.get(id=l[0]).name
+        locations.append({"location_id": location.id, "lat_long": (location.latitude, location.longitude)})
     current_coordinates = (location.latitude, location.longitude)
     min_distance, nearest_location = Location.calculate_nearest(current_coordinates, locations)
     nearest_location = Location.objects.get(id=nearest_location)
