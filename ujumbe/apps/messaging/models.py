@@ -60,34 +60,19 @@ class IncomingMessage(Message):
     datetime_sent = models.DateTimeField(blank=True, null=True)
     shortcode = models.CharField(max_length=20, null=False, blank=False)
 
-    def validate_shortcode(self):
+    def check_shortcode_phonenumer_match(self):
         # number sending to itself so skip
-        shortcode = str(self.shortcode) if str(self.shortcode).startswith("+") else "+{}".format(
-            self.shortcode)
-        if shortcode == self.phonenumber:
-            self.mark_processed()
-            raise MessageException("Short-code match phone number {} for message {}.".format(self.shortcode, self.id))
+        return self.shortcode == self.phonenumber
 
-    def validate_keyword(self):
+    def is_keyword_valid(self):
         parts = self.text.split("*") if "*" in self.text else self.text.split(" ")
         keyword = str(parts[0]).lower().strip()
         choices = [str(MessageKeywords.choices[index][0]).lower().strip() for index, value in
                    enumerate(MessageKeywords.choices)]
-        if keyword not in choices:
-            # notify use that his choice is wrong
-            response = "Your keyword {} is invalid. Try again with either {}. ".format(
-                keyword, self.get_formatted_message_keywords())
-            OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-            self.mark_processed()
-            raise MessageException("Invalid keyword {} for message {}".format(keyword, self.id))
+        return keyword in choices
 
-    def check_profile_registration(self):
-        profile_qs = Profile.objects.filter(telephone=self.phonenumber)
-        if not profile_qs.exists():
-            text = "Please register for Ujumbe to use any of its services"
-            OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=text)
-            self.mark_processed()
-            raise MessageException("Unregistered user for message {}".format(self.id))
+    def is_profile_registered(self):
+        return Profile.objects.filter(telephone=self.phonenumber).exists()
 
     def process(self):
         with transaction.atomic():
@@ -98,82 +83,88 @@ class IncomingMessage(Message):
         keyword = str(parts[0]).upper().strip()
 
         # Check if sender is same as recipient and skip
-        self.validate_shortcode()
+        if not self.check_shortcode_phonenumer_match():
+            self.mark_processed()
+            return
 
         # Check if the keyword is valid, if not raise
-        self.validate_keyword()
+        if not self.is_keyword_valid():
+            response = "Your keyword {} is invalid. Try again with either {}. ".format(
+                keyword, self.get_formatted_message_keywords())
+            OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+            self.mark_processed()
+            return
 
         # Check if the user is registered
-        if keyword != MessageKeywords.Register:
-            self.check_profile_registration()
+        if keyword != MessageKeywords.Register and not self.is_profile_registered():
+            text = "Please register for Ujumbe to use any of its services"
+            OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=text)
+            return
 
-        try:
-            if keyword == MessageKeywords.Register:
-                if len(parts) < 3:
-                    self.mark_processed()
-                    OutgoingMessages.objects.create(text="Please provide both first and last name",
-                                                    phonenumber=self.phonenumber)
-                    return
-                from ujumbe.apps.profiles.tasks import create_profile
-                create_profile(first_name=parts[1], last_name=parts[2], phonenumber=str(self.phonenumber))
-            elif keyword == MessageKeywords.CurrentWeather:
-                from ujumbe.apps.weather.tasks import process_current_weather_request
-                detailed = False
-                location_name = None
-                if len(parts) > 1:
-                    if parts[1] == "DETAILED":
-                        detailed = True
-                    if parts[1] == "SUMMARY":
-                        detailed = False
-                    else:
-                        location_name = parts[1]
-                if len(parts) > 2:
-                    location_name = parts[2]
-                process_current_weather_request(self.phonenumber, detailed, location_name)
-            elif keyword == MessageKeywords.Location:
-                if len(parts) <= 1:
-                    response = "Please provide a location name."
-                    OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+        if keyword == MessageKeywords.Register:
+            if len(parts) < 3:
+                self.mark_processed()
+                OutgoingMessages.objects.create(text="Please provide both first and last name",
+                                                phonenumber=self.phonenumber)
+                return
+            from ujumbe.apps.profiles.tasks import create_profile
+            create_profile(first_name=parts[1], last_name=parts[2], phonenumber=str(self.phonenumber))
+        elif keyword == MessageKeywords.CurrentWeather:
+            from ujumbe.apps.weather.tasks import process_current_weather_request
+            detailed = False
+            location_name = None
+            if len(parts) > 1:
+                if parts[1] == "DETAILED":
+                    detailed = True
+                if parts[1] == "SUMMARY":
+                    detailed = False
                 else:
                     location_name = parts[1]
-                    from ujumbe.apps.profiles.tasks import set_user_location
-                    set_user_location(location_name, self.phonenumber)
-            elif keyword == MessageKeywords.Language:
-                if len(parts) < 2:
-                    response = "Please provide a language. Currently available choices are en, sw."
-                    OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-                    self.mark_processed()
-                    return
-                from ujumbe.apps.profiles.tasks import set_user_language
-                set_user_language(self.phonenumber, parts[1])
-            elif keyword == MessageKeywords.Subscribe:
-                subscription_type = parts[1]
-                frequency = parts[2]
-                location_name = parts[3] if len(parts) > 3 else None
-                from ujumbe.apps.profiles.tasks import create_subscription
-                create_subscription(self.phonenumber, subscription_type, frequency, location_name)
-            elif keyword == MessageKeywords.Unsubscribe:
-                from ujumbe.apps.profiles.tasks import cancel_user_subscriptions
-                cancel_user_subscriptions(self.phonenumber)
-            elif keyword == MessageKeywords.Forecast:
-                response = "This feature is coming soon! Stay put. "
+            if len(parts) > 2:
+                location_name = parts[2]
+            process_current_weather_request(self.phonenumber, detailed, location_name)
+        elif keyword == MessageKeywords.Location:
+            if len(parts) <= 1:
+                response = "Please provide a location name."
                 OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-            elif keyword == MessageKeywords.Market:
-                from ujumbe.apps.marketdata.tasks import send_user_product_price_today
-                if len(parts) > 1:
-                    product_name = parts[1]
-                    location_name = None
-                    if len(parts) > 2:
-                        location_name = parts[2]
-                    send_user_product_price_today.delay\
-                        (product_name, phonenumber=str(self.phonenumber), location_name=location_name)
-                else:
-                    response = "Please provide product name."
-                    OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
-        except MessageException as e:
-            logger.error(str(e))
-        finally:
-            self.mark_processed()
+            else:
+                location_name = parts[1]
+                from ujumbe.apps.profiles.tasks import set_user_location
+                set_user_location(location_name, self.phonenumber)
+        elif keyword == MessageKeywords.Language:
+            if len(parts) < 2:
+                response = "Please provide a language. Currently available choices are en, sw."
+                OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+                self.mark_processed()
+                return
+            from ujumbe.apps.profiles.tasks import set_user_language
+            set_user_language(self.phonenumber, parts[1])
+        elif keyword == MessageKeywords.Subscribe:
+            subscription_type = parts[1]
+            frequency = parts[2]
+            location_name = parts[3] if len(parts) > 3 else None
+            from ujumbe.apps.profiles.tasks import create_subscription
+            create_subscription(self.phonenumber, subscription_type, frequency, location_name)
+        elif keyword == MessageKeywords.Unsubscribe:
+            from ujumbe.apps.profiles.tasks import cancel_user_subscriptions
+            cancel_user_subscriptions(self.phonenumber)
+        elif keyword == MessageKeywords.Forecast:
+            response = "This feature is coming soon! Stay put. "
+            OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+        elif keyword == MessageKeywords.Market:
+            from ujumbe.apps.marketdata.tasks import send_user_product_price_today
+            if len(parts) > 1:
+                product_name = parts[1]
+                location_name = None
+                if len(parts) > 2:
+                    location_name = parts[2]
+                send_user_product_price_today.delay\
+                    (product_name, phonenumber=str(self.phonenumber), location_name=location_name)
+            else:
+                response = "Please provide product name."
+                OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+
+        self.mark_processed()
 
 
 @with_author
