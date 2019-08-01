@@ -19,9 +19,21 @@ PROJECT_DIR = os.path.join(BASE_DIR, "..")
 
 env = environ.Env(
     # set casting, default value
-    DEBUG=(bool, False)
+    DEBUG=(bool, False),
+    DO_SENTRY_LOGGING=(bool, True)
 )
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, "settings", "settings.env"))
+
+DO_SENTRY_LOGGING = env("DO_SENTRY_LOGGING", default=True)
+if DO_SENTRY_LOGGING:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    # Logging by Sentry
+    SENTRY_DSN = env("SENTRY_DSN", default="")
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()]
+    )
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -53,7 +65,8 @@ INSTALLED_APPS = [
 
     'ujumbe.apps.messaging.apps.AfricastalkingConfig',
     'ujumbe.apps.profiles.apps.ProfilesConfig',
-    'ujumbe.apps.weather.apps.WeatherConfig'
+    'ujumbe.apps.weather.apps.WeatherConfig',
+    'ujumbe.apps.marketdata.apps.MarketdataConfig'
 ]
 
 MIDDLEWARE = [
@@ -96,7 +109,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'HOST': env('DEFAULT_DB_HOST', default="localhost"),
-        'PORT':env('DEFAULT_DB_PORT', default='3306'),
+        'PORT': env('DEFAULT_DB_PORT', default='3306'),
         'NAME': env("DEFAULT_DB_NAME", default="ujumbe"),
         'USER': env("DEFAULT_DB_USER", default="root"),
         'PASSWORD': env("DEFAULT_DB_PASSWORD", default="")

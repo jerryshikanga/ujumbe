@@ -90,6 +90,10 @@ class IncomingMessage(Message):
             raise MessageException("Unregistered user for message {}".format(self.id))
 
     def process(self):
+        with transaction.atomic():
+            self.process_response()
+
+    def process_response(self):
         parts = self.text.split("*") if "*" in self.text else self.text.split(" ")
         keyword = str(parts[0]).upper().strip()
 
@@ -154,6 +158,18 @@ class IncomingMessage(Message):
             elif keyword == MessageKeywords.Forecast:
                 response = "This feature is coming soon! Stay put. "
                 OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
+            elif keyword == MessageKeywords.Market:
+                from ujumbe.apps.marketdata.tasks import send_user_product_price_today
+                if len(parts) > 1:
+                    product_name = parts[1]
+                    location_name = None
+                    if len(parts) > 2:
+                        location_name = parts[2]
+                    send_user_product_price_today.delay\
+                        (product_name, phonenumber=str(self.phonenumber), location_name=location_name)
+                else:
+                    response = "Please provide product name."
+                    OutgoingMessages.objects.create(phonenumber=self.phonenumber, text=response)
         except MessageException as e:
             logger.error(str(e))
         finally:
@@ -178,7 +194,8 @@ class OutgoingMessages(Message):
     translated_text = models.TextField()
 
     def process(self):
-        self.send()
+        with transaction.atomic():
+            self.send()
 
     def send(self):
         profile = None
@@ -249,3 +266,4 @@ class MessageKeywords(DjangoChoices):
     Location = ChoiceItem("LOCATION")
     Forecast = ChoiceItem("FORECAST")
     Language = ChoiceItem("LANGUAGE")
+    Market = ChoiceItem("MARKET")
