@@ -182,7 +182,7 @@ class Location(TimeStampedModel):
                     continue
                 distance = vincenty(center_point, co_ordinates[i]["lat_long"]).km
                 if distance < min_distance:
-                    min_distance, min_coordinates = distance, co_ordinates[i]["location_id"]
+                    min_distance, nearest_location = distance, co_ordinates[i]["location_id"]
             return min_distance, nearest_location
 
 
