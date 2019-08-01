@@ -83,6 +83,7 @@ def create_super_user_with_profile(username: str, password: str, email: str, fir
         is_superuser=True,
         is_active=True,
         username=username,
+        email=email
     )
     superuser.set_password(password)
     superuser.save()
@@ -96,24 +97,33 @@ def create_super_user_with_profile(username: str, password: str, email: str, fir
 def create_celery_beat_tasks():
     from django_celery_beat.models import PeriodicTask, IntervalSchedule
     # executes every 10 seconds.
-    schedule, created = IntervalSchedule.objects.get_or_create(
+    ten_seconds_schedule, created = IntervalSchedule.objects.get_or_create(
         every=10,
         period=IntervalSchedule.SECONDS
     )
     PeriodicTask.objects.get_or_create(
-        interval=schedule,
+        interval=ten_seconds_schedule,
         name="Check and send subscriptions",
         task="ujumbe.apps.profiles.tasks.check_and_send_user_subscriptions"
     )
     PeriodicTask.objects.get_or_create(
-        interval=schedule,
+        interval=ten_seconds_schedule,
         name="Check and process incoming messages",
         task="ujumbe.apps.messaging.tasks.process_incoming_messages"
     )
     PeriodicTask.objects.get_or_create(
-        interval=schedule,
+        interval=ten_seconds_schedule,
         name="Check and process outgoing messages",
         task="ujumbe.apps.messaging.tasks.process_outgoing_messages"
+    )
+    daily_schedule, created = IntervalSchedule.objects.get_or_create(
+        every=10,
+        period=IntervalSchedule.SECONDS
+    )
+    PeriodicTask.objects.get_or_create(
+        interval=daily_schedule,
+        name="Update product prices today",
+        task="ujumbe.apps.marketdata.tasks.get_product_prices"
     )
 
 

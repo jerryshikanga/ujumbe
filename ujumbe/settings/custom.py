@@ -1,18 +1,8 @@
 import logging
 import logging.config
 
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
-
 from ujumbe.settings.base import *
 from ujumbe.settings import check_if_config_dict_exists
-
-# Logging by Sentry
-SENTRY_DSN = env("SENTRY_DSN", default="")
-sentry_sdk.init(
-    dsn=SENTRY_DSN,
-    integrations=[DjangoIntegration()]
-)
 
 # celery
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379')

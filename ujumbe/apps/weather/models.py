@@ -160,6 +160,31 @@ class Location(TimeStampedModel):
             logger.error(str(e))
             return None
 
+    @classmethod
+    def calculate_nearest(cls, center_point, co_ordinates: list):
+        """
+        :param center_point: Co-ordinates of the point in question
+        :param co_ordinates: A list dicts of co-ordinates we want to find with the respective ujumbe location ids
+        dict is in form {"location_id":123, "co-ordinates":(12, 12)}
+        :return: location id of the nearest location, distance
+        """
+        if len(co_ordinates) == 0:
+            return None
+        elif len(co_ordinates) == 1:
+            return co_ordinates[0]
+        else:
+            from geopy.distance import vincenty
+            min_distance = vincenty(center_point, co_ordinates[0]["lat_long"]).km
+            nearest_location = co_ordinates[0]["location_id"]
+            for i, point in enumerate(co_ordinates):
+                if i == 0:
+                    # we already calculated for first item so skip
+                    continue
+                distance = vincenty(center_point, co_ordinates[i]["lat_long"]).km
+                if distance < min_distance:
+                    min_distance, min_coordinates = distance, co_ordinates[1]["location_id"]
+            return min_distance, nearest_location
+
 
 @receiver(signal=post_save, sender=Location)
 def check_and_update_location_by_google_maps_and_accuweather(sender, instance, created, **kwargs):
