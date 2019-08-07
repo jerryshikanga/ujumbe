@@ -173,14 +173,14 @@ class Location(TimeStampedModel):
         elif len(co_ordinates) == 1:
             return co_ordinates[0]
         else:
-            from geopy.distance import vincenty
-            min_distance = vincenty(center_point, co_ordinates[0]["lat_long"]).km
+            from geopy.distance import distance
+            min_distance = distance(center_point, co_ordinates[0]["lat_long"]).km
             nearest_location = co_ordinates[0]["location_id"]
             for i, point in enumerate(co_ordinates):
                 if i == 0:
                     # we already calculated for first item so skip
                     continue
-                distance = vincenty(center_point, co_ordinates[i]["lat_long"]).km
+                distance = distance(center_point, co_ordinates[i]["lat_long"]).km
                 if distance < min_distance:
                     min_distance, nearest_location = distance, co_ordinates[i]["location_id"]
             return min_distance, nearest_location

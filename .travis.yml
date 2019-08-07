@@ -1,22 +1,27 @@
 language: python
-sudo : required
-dist: xenial
+
 python:
-  - "3.5"
-env :
+  - "3.6"
+
+services: mysql
+
+env:
+  global:
+    - DJANGO_SETTINGS_MODULE="pharmily.settings"
+    - PYTHONPATH="/home/travis/build/jerryshikanga/ujumbe"
+    - PIP_USE_MIRRORS=true
+    - BUILD_ON_TRAVIS=true
   matrix:
-    - DJANGO="Django>2"
-services:
-  - mysql
-addons:
-  apt:
-    sources:
-      - mysql-5.7-trusty
-    packages:
-      - mysql-server
+    - DJANGO=2.1.1 DB=mysql
+
+#commands to install dependencies
 install:
-    - pip install -r requirements.txt
+  - pip install -q -r requirements.txt
+
 before_script:
-  - mysql -e 'create database ujumbe;'
+  - mysql -e "CREATE DATABASE ujumbe; CREATE USER 'ujumbe'@'localhost' IDENTIFIED BY 'ujumbe'; GRANT ALL PRIVILEGES ON * . * TO 'ujumbe'@'localhost'; FLUSH PRIVILEGES;"
+  - python manage.py makemigrations
+
+#command to run the test suite
 script:
-    - python manage.py test
+  - python manage.py test

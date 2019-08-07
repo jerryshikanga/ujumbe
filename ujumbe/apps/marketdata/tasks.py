@@ -26,6 +26,8 @@ def get_product_prices(self):
         product_price.save()
     return data
 
+# from ujumbe.apps.marketdata.tasks import send_user_product_price_today
+# send_user_product_price_today("Beans", "+254727447101", "Malava")
 
 @task
 def send_user_product_price_today(product_name, phonenumber, location_name=None):
@@ -47,8 +49,8 @@ def send_user_product_price_today(product_name, phonenumber, location_name=None)
         location = Location.objects.get(id=l[0])
         locations.append({"location_id": location.id, "lat_long": (location.latitude, location.longitude)})
     current_coordinates = (location.latitude, location.longitude)
-    min_distance, nearest_location = Location.calculate_nearest(current_coordinates, locations)
-    nearest_location = Location.objects.get(id=nearest_location)
+    min_distance, nearest_location_id = Location.calculate_nearest(current_coordinates, locations)
+    nearest_location = Location.objects.get(id=nearest_location_id)
     product = product_queryset.first()
     product_price = ProductPrice.objects.get(product=product, location=nearest_location)
     text = "Price for Product {} is {} - {} {} for {} {} at Location {} which is {} kilometers away from {}.".format(
