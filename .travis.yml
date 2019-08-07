@@ -7,7 +7,7 @@ services: mysql
 
 env:
   global:
-    - DJANGO_SETTINGS_MODULE="pharmily.settings"
+    - DJANGO_SETTINGS_MODULE="ujumbe.settings"
     - PYTHONPATH="/home/travis/build/jerryshikanga/ujumbe"
     - PIP_USE_MIRRORS=true
     - BUILD_ON_TRAVIS=true
