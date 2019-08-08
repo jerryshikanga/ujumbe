@@ -31,7 +31,7 @@ EMAIL_USE_SSL = env("EMAIL_USE_SSL", default=True)
 DEFAULT_FROM_EMAIL = "admin@admin.com"
 SERVER_EMAIL = 'server@admin.com'
 
-OPEN_WEATHER_APP_ID = env("OPEN_WEATHER_APPID")
+OPEN_WEATHER_APP_ID = env("OPEN_WEATHER_APPID", default="")
 
 logging.basicConfig(
     level=logging.DEBUG,
