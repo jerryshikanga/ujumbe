@@ -20,6 +20,7 @@ install:
 
 before_script:
   - mysql -e "CREATE DATABASE ujumbe; CREATE USER 'ujumbe'@'localhost' IDENTIFIED BY 'ujumbe'; GRANT ALL PRIVILEGES ON * . * TO 'ujumbe'@'localhost'; FLUSH PRIVILEGES;"
+  - mkdir logs
   - touch logs/debug.log
   - python manage.py makemigrations
 
